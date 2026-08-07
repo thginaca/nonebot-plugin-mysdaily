@@ -48,7 +48,7 @@ coverage.xml
 *.cover
 .hypothesis/
 
-# 米游签运行时产物
+# MiyoQian 运行时产物
 config.yaml
 qrcode.png
 *.log

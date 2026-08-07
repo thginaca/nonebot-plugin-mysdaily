@@ -20,33 +20,33 @@ except Exception:
 
 
 class Config(BaseModel):
-    """米游签插件配置。"""
+    """MiyoQian 插件配置。"""
 
-    miyouqian_config_path: str = Field(
+    mysdaily_config_path: str = Field(
         default="",
-        description="米游签 config.yaml 路径，留空则使用插件目录",
+        description="MiyoQian config.yaml 路径，留空则使用插件目录",
     )
-    miyouqian_command: str = Field(
+    mysdaily_command: str = Field(
         default="myq",
-        description="米游签指令前缀，例如 myq -> /myq run",
+        description="MiyoQian 指令前缀，例如 myq -> /myq run",
     )
-    miyouqian_schedule_enable: Optional[bool] = Field(
+    mysdaily_schedule_enable: Optional[bool] = Field(
         default=None,
         description="是否启用每日定时签到，留空读取 config.yaml",
     )
-    miyouqian_schedule_time: str = Field(
+    mysdaily_schedule_time: str = Field(
         default="",
         description="每日执行时间 HH:MM，留空读取 config.yaml",
     )
-    miyouqian_schedule_jitter: int = Field(
+    mysdaily_schedule_jitter: int = Field(
         default=0,
         description="随机延后分钟数，<=0 表示读取 config.yaml",
     )
-    miyouqian_reply_on_run: bool = Field(
+    mysdaily_reply_on_run: bool = Field(
         default=True,
         description="手动执行签到后是否把结果回复给触发者",
     )
-    miyouqian_login_timeout: int = Field(
+    mysdaily_login_timeout: int = Field(
         default=120,
         description="扫码登录等待超时秒数",
     )
@@ -87,7 +87,7 @@ def get_plugin_config() -> Config:
         except Exception:
             pass
 
-    # 2) 兜底：从 driver.config 拿全局配置并过滤 MIYOUQIAN_ 前缀
+    # 2) 兜底：从 driver.config 拿全局配置并过滤 MYSDILY_ 前缀
     driver = get_driver()
     if hasattr(driver.config, "dict"):
         try:
@@ -97,11 +97,11 @@ def get_plugin_config() -> Config:
     else:
         raw = {k: getattr(driver.config, k) for k in dir(driver.config) if not k.startswith("_")}
 
-    # 只挑 miyouqian_ 前缀的项
+    # 只挑 mysdaily_ 前缀的项
     mq_cfg: dict[str, Any] = {}
     for key in ("config_path", "command", "schedule_enable", "schedule_time",
                 "schedule_jitter", "reply_on_run", "login_timeout"):
-        raw_key = f"miyouqian_{key}"
+        raw_key = f"mysdaily_{key}"
         if raw_key in raw:
             mq_cfg[key] = raw[raw_key]
 
@@ -115,15 +115,15 @@ def get_plugin_config() -> Config:
     if "login_timeout" in mq_cfg:
         mq_cfg["login_timeout"] = _coerce_int(mq_cfg["login_timeout"], 120)
 
-    return Config(**{f"miyouqian_{k}": v for k, v in mq_cfg.items()})
+    return Config(**{f"mysdaily_{k}": v for k, v in mq_cfg.items()})
 
 
 def resolve_config_path(plugin_config: Config) -> "pathlib.Path":
-    """返回米游签 config.yaml 的实际路径，必要时复制示例配置。"""
+    """返回 MiyoQian config.yaml 的实际路径，必要时复制示例配置。"""
     import pathlib
     import shutil
 
-    explicit = plugin_config.miyouqian_config_path.strip()
+    explicit = plugin_config.mysdaily_config_path.strip()
     if explicit:
         path = pathlib.Path(explicit).expanduser().resolve()
     else:

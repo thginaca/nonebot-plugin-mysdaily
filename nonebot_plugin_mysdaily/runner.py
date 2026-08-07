@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """任务执行异步包装与结果回发。
 
-原 `miyouqian.service.runner.run_tasks` 是同步阻塞调用（内部使用 httpx.Client），
+原 `mysdaily_core.service.runner.run_tasks` 是同步阻塞调用（内部使用 httpx.Client），
 在 NoneBot 异步事件循环中必须通过 `run_in_executor` 放到线程池执行。
 
 执行完成后：
@@ -20,14 +20,14 @@ from typing import Any, Optional
 from nonebot.adapters.onebot.v11 import Bot, Event, MessageSegment
 from nonebot.log import logger
 
-from miyouqian.core.config import load_config, log_path
-from miyouqian.core.logs import append_log, configure_logger, format_line
-from miyouqian.service.notifier import is_task_success, send_push
-from miyouqian.service.runner import run_tasks
+from mysdaily_core.core.config import load_config, log_path
+from mysdaily_core.core.logs import append_log, configure_logger, format_line
+from mysdaily_core.service.notifier import is_task_success, send_push
+from mysdaily_core.service.runner import run_tasks
 
 
 class MiyoQianRuntime:
-    """米游签运行时单例：持有配置路径、当前运行状态，提供执行入口。"""
+    """MiyoQian 运行时单例：持有配置路径、当前运行状态，提供执行入口。"""
 
     def __init__(self, config_path: pathlib.Path) -> None:
         self.config_path = config_path
@@ -100,13 +100,13 @@ class MiyoQianRuntime:
         try:
             lines = await loop.run_in_executor(None, sync_run)
         except Exception as exc:
-            logger.opt(exception=True).error("米游签任务执行失败")
+            logger.opt(exception=True).error("MiyoQian 任务执行失败")
             append_log(log_file, format_line(f"任务执行异常: {exc}", "nonebot"), component="nonebot")
-            push_result = send_push(config, "米游签任务失败", str(exc), success=False)
+            push_result = send_push(config, "MiyoQian 任务失败", str(exc), success=False)
             if push_result:
                 append_log(log_file, format_line(push_result, "push"), component="push")
             if reply and reply_event is not None and bot is not None:
-                await _safe_send(bot, reply_event, f"米游签任务执行失败：{exc}")
+                await _safe_send(bot, reply_event, f"MiyoQian 任务执行失败：{exc}")
             return [f"任务执行失败：{exc}"]
         finally:
             with self._lock:
@@ -116,7 +116,7 @@ class MiyoQianRuntime:
         success = is_task_success(lines)
         push_result = send_push(
             config,
-            "米游签任务完成",
+            "MiyoQian 任务完成",
             "\n".join(lines),
             success=success,
         )
@@ -132,14 +132,14 @@ class MiyoQianRuntime:
 def _format_reply(lines: list[str], success: bool) -> str:
     """把任务输出格式化为 QQ 友好的文本（控制在合理长度内）。"""
     if not lines:
-        return "米游签任务执行完成，但未产生输出"
+        return "MiyoQian 任务执行完成，但未产生输出"
     status = "✅ 全部成功" if success else "⚠️ 存在失败项"
     body = "\n".join(lines)
     # QQ 单条消息不宜过长，超过阈值则截断并提示查看日志
     limit = 3500
     if len(body) > limit:
-        body = body[:limit] + "\n...（日志过长已截断，完整记录见 logs/miyouqian.log）"
-    return f"米游签任务执行完成 ({status})\n\n{body}"
+        body = body[:limit] + "\n...（日志过长已截断，完整记录见 logs/mysdaily.log）"
+    return f"MiyoQian 任务执行完成 ({status})\n\n{body}"
 
 
 async def _safe_send(bot: Bot, event: Event, message: str) -> None:
@@ -147,7 +147,7 @@ async def _safe_send(bot: Bot, event: Event, message: str) -> None:
     try:
         await bot.send(event, MessageSegment.text(message))
     except Exception:
-        logger.opt(exception=True).warning("回发米游签结果失败")
+        logger.opt(exception=True).warning("回发 MiyoQian 结果失败")
 
 
 # 全局运行时实例，由插件 __init__.py 在启动钩子里赋值
@@ -156,7 +156,7 @@ runtime: Optional[MiyoQianRuntime] = None
 
 def get_runtime() -> MiyoQianRuntime:
     if runtime is None:
-        raise RuntimeError("米游签插件尚未初始化，请检查 on_startup 是否执行")
+        raise RuntimeError("MiyoQian 插件尚未初始化，请检查 on_startup 是否执行")
     return runtime
 
 

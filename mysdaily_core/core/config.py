@@ -35,7 +35,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "data_dir": "data",
         "credentials_file": "credentials.yaml",
         "log_dir": "logs",
-        "log_file": "miyouqian.log",
+        "log_file": "mysdaily.log",
     },
     "device": {"id": "", "fp": "", "name": "", "model": "", "presets": DEFAULT_DEVICE_PRESETS},
     "features": {"game_checkin": True, "cloud_game_checkin": False, "bbs_tasks": False},
@@ -126,7 +126,7 @@ def normalize_config(config: dict[str, Any]) -> None:
     storage.setdefault("data_dir", "data")
     storage.setdefault("credentials_file", "credentials.yaml")
     storage.setdefault("log_dir", "logs")
-    storage.setdefault("log_file", "miyouqian.log")
+    storage.setdefault("log_file", "mysdaily.log")
     cloud_games = config.setdefault("cloud_games", {})
     if not isinstance(cloud_games, dict):
         cloud_games = {}
@@ -493,7 +493,7 @@ def credentials_path(config_path: str | pathlib.Path, config: dict[str, Any]) ->
 def log_path(config_path: str | pathlib.Path, config: dict[str, Any]) -> pathlib.Path:
     storage = config.get("storage", {})
     log_dir = resolve_storage_path(config_path, str(storage.get("log_dir") or "logs"))
-    return log_dir / str(storage.get("log_file") or "miyouqian.log")
+    return log_dir / str(storage.get("log_file") or "mysdaily.log")
 
 
 def resolve_storage_path(config_path: str | pathlib.Path, value: str) -> pathlib.Path:

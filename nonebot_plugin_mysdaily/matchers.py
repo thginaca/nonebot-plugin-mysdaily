@@ -3,7 +3,7 @@
 
 权限：任何人可触发所有指令。
 
-指令结构（前缀默认 `myq`，可通过 .env 的 MIYOUQIAN_COMMAND 修改）：
+指令结构（前缀默认 `myq`，可通过 .env 的 MYSDILY_COMMAND 修改）：
     /myq                      显示帮助
     /myq run [账号名]           立即执行签到（可选指定账号）
     /myq run --games           仅执行游戏社区/云游戏签到
@@ -34,15 +34,15 @@ from nonebot.adapters.onebot.v11 import (
 from nonebot.log import logger
 from nonebot.params import CommandArg
 
-from miyouqian.auth.login import QRLogin
-from miyouqian.core import cookies
-from miyouqian.core.config import (
+from mysdaily_core.auth.login import QRLogin
+from mysdaily_core.core import cookies
+from mysdaily_core.core.config import (
     find_account,
     load_config,
     save_config,
     upsert_account,
 )
-from miyouqian.core.http import ApiClient
+from mysdaily_core.core.http import ApiClient
 
 from .runner import get_runtime
 from .scheduler import reload_daily_job
@@ -59,7 +59,7 @@ ANYONE = None
 # ---------------------------------------------------------------------------
 def _help_text(command: str) -> str:
     return (
-        f"米游签指令帮助（前缀 {command}）\n"
+        f"MiyoQian 指令帮助（前缀 {command}）\n"
         f"  {command}                      显示本帮助\n"
         f"  {command} run [账号名]           立即执行签到\n"
         f"  {command} run --games           仅执行游戏社区/云游戏签到\n"
@@ -103,7 +103,7 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
         await bot.send(event, "--games 和 --bbs 不能同时使用")
         return
 
-    await bot.send(event, "⏳ 开始执行米游签任务，请稍候…")
+    await bot.send(event, "⏳ 开始执行 MiyoQian 任务，请稍候…")
     await runtime.run_and_notify(
         bot,
         event,
@@ -292,7 +292,7 @@ def _wait_login(holder: dict, timeout: int) -> dict[str, str]:
 def plugin_config_login_timeout() -> int:
     from . import plugin_config
 
-    return plugin_config.miyouqian_login_timeout
+    return plugin_config.mysdaily_login_timeout
 
 
 # ---------------------------------------------------------------------------

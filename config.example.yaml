@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 米游签配置文件。首次启动时由插件自动复制生成，填写后即可使用。
+# MiyoQian 配置文件。首次启动时由插件自动复制生成，填写后即可使用。
 
 enable: true
 
@@ -10,7 +10,7 @@ storage:
   data_dir: data
   credentials_file: credentials.yaml
   log_dir: logs
-  log_file: miyouqian.log
+  log_file: mysdaily.log
 
 device:
   id: ""

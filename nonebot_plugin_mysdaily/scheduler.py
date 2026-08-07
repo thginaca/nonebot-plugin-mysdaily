@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """基于 nonebot_plugin_apscheduler 的每日签到调度。
 
-替代原 `miyouqian.service.scheduler.DailyScheduler`（基于 threading），
+替代原 `mysdaily_core.service.scheduler.DailyScheduler`（基于 threading），
 与 NoneBot 生命周期一致，无需额外线程，重启 bot 即重新注册任务。
 """
 
@@ -15,7 +15,7 @@ from nonebot_plugin_apscheduler import scheduler
 from .config import Config
 from .runner import MiyoQianRuntime
 
-JOB_ID = "miyouqian_daily_checkin"
+JOB_ID = "mysdaily_checkin"
 
 
 def _parse_time(value: str) -> tuple[int, int]:
@@ -33,17 +33,17 @@ def resolve_schedule(config_yaml: dict, plugin_config: Config) -> tuple[bool, st
     """合并 .env 与 config.yaml 的调度配置，.env 优先。"""
     sched = config_yaml.get("schedule") or {}
     enable = (
-        plugin_config.miyouqian_schedule_enable
-        if plugin_config.miyouqian_schedule_enable is not None
+        plugin_config.mysdaily_schedule_enable
+        if plugin_config.mysdaily_schedule_enable is not None
         else bool(sched.get("enable", False))
     )
     time_str = (
-        plugin_config.miyouqian_schedule_time.strip()
+        plugin_config.mysdaily_schedule_time.strip()
         or str(sched.get("time", "00:00"))
     )
     jitter = (
-        plugin_config.miyouqian_schedule_jitter
-        if plugin_config.miyouqian_schedule_jitter > 0
+        plugin_config.mysdaily_schedule_jitter
+        if plugin_config.mysdaily_schedule_jitter > 0
         else int(sched.get("jitter_minutes", 30) or 0)
     )
     return enable, time_str, max(jitter, 0)
@@ -51,7 +51,7 @@ def resolve_schedule(config_yaml: dict, plugin_config: Config) -> tuple[bool, st
 
 async def _daily_job(runtime: MiyoQianRuntime) -> None:
     """定时任务实际执行函数：不回发会话，只走配置的推送渠道。"""
-    logger.info("米游签定时任务触发，开始执行")
+    logger.info("MiyoQian 定时任务触发，开始执行")
     await runtime.run_and_notify(
         bot=None,
         reply_event=None,
@@ -69,13 +69,13 @@ def setup_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:
         scheduler.remove_job(JOB_ID)
 
     if not enable:
-        logger.info("米游签每日调度已禁用，不注册定时任务")
+        logger.info("MiyoQian 每日调度已禁用，不注册定时任务")
         return
 
     try:
         hour, minute = _parse_time(time_str)
     except ValueError as exc:
-        logger.error(f"米游签调度时间配置无效: {exc}")
+        logger.error(f"MiyoQian 调度时间配置无效: {exc}")
         return
 
     # APScheduler 的 jitter 单位是秒，在触发时间基础上随机偏移
@@ -93,7 +93,7 @@ def setup_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:
         coalesce=True,
     )
     jitter_desc = f"，随机波动 ±{jitter_minutes} 分钟" if jitter_minutes > 0 else ""
-    logger.info(f"米游签定时任务已注册：每日 {time_str}{jitter_desc}")
+    logger.info(f"MiyoQian 定时任务已注册：每日 {time_str}{jitter_desc}")
 
 
 def reload_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:

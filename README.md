@@ -199,13 +199,13 @@ schedule:
 
 | 环境变量 | 说明 |
 | --- | --- |
-| `MIYOUQIAN_COMMAND` | 指令前缀，默认 `myq` |
-| `MIYOUQIAN_CONFIG_PATH` | `config.yaml` 路径，留空使用插件目录 |
-| `MIYOUQIAN_SCHEDULE_ENABLE` | 是否启用定时签到（true/false） |
-| `MIYOUQIAN_SCHEDULE_TIME` | 每日执行时间，如 `09:00` |
-| `MIYOUQIAN_SCHEDULE_JITTER` | 随机波动分钟数 |
-| `MIYOUQIAN_REPLY_ON_RUN` | 手动执行后是否回发结果，默认 true |
-| `MIYOUQIAN_LOGIN_TIMEOUT` | 扫码登录超时秒数，默认 120 |
+| `MYSDILY_COMMAND` | 指令前缀，默认 `myq` |
+| `MYSDILY_CONFIG_PATH` | `config.yaml` 路径，留空使用插件目录 |
+| `MYSDILY_SCHEDULE_ENABLE` | 是否启用定时签到（true/false） |
+| `MYSDILY_SCHEDULE_TIME` | 每日执行时间，如 `09:00` |
+| `MYSDILY_SCHEDULE_JITTER` | 随机波动分钟数 |
+| `MYSDILY_REPLY_ON_RUN` | 手动执行后是否回发结果，默认 true |
+| `MYSDILY_LOGIN_TIMEOUT` | 扫码登录超时秒数，默认 120 |
 
 ---
 
@@ -380,9 +380,9 @@ schedule:
 通过 `.env` 覆盖（优先级更高）：
 
 ```env
-MIYOUQIAN_SCHEDULE_ENABLE=true
-MIYOUQIAN_SCHEDULE_TIME=00:00
-MIYOUQIAN_SCHEDULE_JITTER=30
+MYSDILY_SCHEDULE_ENABLE=true
+MYSDILY_SCHEDULE_TIME=00:00
+MYSDILY_SCHEDULE_JITTER=30
 ```
 
 修改后发送 `/myq reload` 即可重载配置。
@@ -510,13 +510,13 @@ nonebot_plugin_mysdaily/
 ├── data/
 │   └── credentials.yaml    # 登录凭证（敏感，勿提交仓库）
 └── logs/
-    └── miyouqian.log       # 运行日志
+    └── mysdaily.log       # 运行日志
 ```
 
 - `config.yaml` 首次启动时自动从 `config.example.yaml` 复制生成
 - `data/credentials.yaml` 存储登录凭证和云游戏 Token
-- `logs/miyouqian.log` 记录每次签到的详细输出
-- `.env` 中的 `MIYOUQIAN_CONFIG_PATH` 可以指定配置文件位置
+- `logs/mysdaily.log` 记录每次签到的详细输出
+- `.env` 中的 `MYSDILY_CONFIG_PATH` 可以指定配置文件位置
 
 ## 常用设置
 
@@ -570,7 +570,7 @@ schedule:
 2. 当前时间是否已经过了今天的执行窗口
 3. 机器人是否在运行
 4. 发送 `/myq status` 查看调度状态
-5. 查看 `logs/miyouqian.log` 确认调度日志
+5. 查看 `logs/mysdaily.log` 确认调度日志
 
 ### 签到提示首次绑定怎么办？
 

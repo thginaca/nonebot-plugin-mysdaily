@@ -8,7 +8,7 @@ root = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(root))
 
 # 1. 验证 DEFAULT_CONFIG 中的默认值
-from miyouqian.core.config import DEFAULT_CONFIG
+from mysdaily_core.core.config import DEFAULT_CONFIG
 sched = DEFAULT_CONFIG["schedule"]
 print(f'DEFAULT_CONFIG schedule: enable={sched["enable"]}, time={sched["time"]}, jitter={sched["jitter_minutes"]}')
 assert sched["time"] == "00:00", 'time should be 00:00'
@@ -66,9 +66,9 @@ assert jitter == 30
 
 # 8. 验证 .env 环境变量覆盖
 cfg_env = Config(
-    miyouqian_schedule_enable=True,
-    miyouqian_schedule_time="00:00",
-    miyouqian_schedule_jitter=30,
+    mysdaily_schedule_enable=True,
+    mysdaily_schedule_time="00:00",
+    mysdaily_schedule_jitter=30,
 )
 enabled, time_str, jitter = resolve_schedule(
     {'schedule': {'enable': False, 'time': '09:00', 'jitter_minutes': 45}},

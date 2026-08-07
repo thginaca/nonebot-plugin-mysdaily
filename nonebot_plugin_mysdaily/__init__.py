@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """MysDaily NoneBot2 插件。
 
-把原 `miyouqian` 库适配为 NoneBot 插件：
+把原 `mysdaily_core` 库适配为 NoneBot 插件：
 - 复用现有签到/登录/推送逻辑（同步，通过 run_in_executor 调用）
 - 用 nonebot_plugin_apscheduler 管理每日定时签到
 - 提供 QQ 指令：run / status / login / toggle / reload
@@ -26,7 +26,7 @@ __plugin_meta__ = PluginMetadata(
     name="MysDaily",
     description="米游社签到、云游戏签到、米游币任务、商品兑换（NoneBot2 插件）",
     usage=(
-        "指令前缀默认 myq（可通过 .env 的 MIYOUQIAN_COMMAND 修改）：\n"
+        "指令前缀默认 myq（可通过 .env 的 MYSDILY_COMMAND 修改）：\n"
         "  /myq run [账号名] [--games|--bbs] [--game genshin]\n"
         "  /myq status\n"
         "  /myq login [账号名]\n"
@@ -46,7 +46,7 @@ __plugin_meta__ = PluginMetadata(
 plugin_config: Config = Config()
 
 # 提前用默认值注册；on_startup 后 matcher 不重注册，因为仅需 command 前缀
-register_matchers(plugin_config.miyouqian_command)
+register_matchers(plugin_config.mysdaily_command)
 
 _runtime: Optional[MiyoQianRuntime] = None
 
@@ -57,7 +57,7 @@ driver = get_driver()
 async def _on_startup() -> None:
     """加载插件配置、初始化运行时并注册每日定时签到任务。"""
     global plugin_config
-    old_command = plugin_config.miyouqian_command
+    old_command = plugin_config.mysdaily_command
     try:
         plugin_config = get_plugin_config()
     except Exception as exc:
@@ -65,9 +65,9 @@ async def _on_startup() -> None:
         plugin_config = Config()
 
     # 配置过的指令前缀与默认不一致时，再补注册一次 matcher
-    if plugin_config.miyouqian_command != old_command:
+    if plugin_config.mysdaily_command != old_command:
         try:
-            register_matchers(plugin_config.miyouqian_command)
+            register_matchers(plugin_config.mysdaily_command)
         except Exception:
             pass
 

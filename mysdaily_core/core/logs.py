@@ -23,7 +23,7 @@ DEFAULT_CONSOLE_LOGO = r"""
         | |  | | | |_| | (_) |   | |_| | | (_| | | | |
         |_|  |_|_|\__, |\___/     \__\_\_|\__,_|_| |_|
                   |___/
-                    米游签 / MiYoQian
+                    MiyoQian / MySDaily
                     
 """.strip("\n")
 
@@ -107,7 +107,7 @@ def clean_component(component: Any) -> str:
 
 
 def render_banner(text: str = "MYQ") -> str:
-    if text.strip().lower() in {"myq", "miyouqian", "米游签"}:
+    if text.strip().lower() in {"myq", "mysdaily"}:
         return DEFAULT_CONSOLE_LOGO
     try:
         from pyfiglet import Figlet

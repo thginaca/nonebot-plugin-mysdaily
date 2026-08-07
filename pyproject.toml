@@ -1,7 +1,7 @@
 [project]
-name = "nonebot-plugin-miyouqian"
+name = "nonebot-plugin-mysdaily"
 version = "0.1.0"
-description = "米游签 NoneBot2 插件：米游社签到、云游戏签到、米游币任务、商品兑换"
+description = "MiyoQian NoneBot2 插件：米游社签到、云游戏签到、米游币任务、商品兑换"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -44,11 +44,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["nonebot_plugin_mysdaily", "miyouqian", "miyouqian.auth", "miyouqian.core", "miyouqian.service", "miyouqian.tasks"]
+packages = ["nonebot_plugin_mysdaily", "mysdaily_core", "mysdaily_core.auth", "mysdaily_core.core", "mysdaily_core.service", "mysdaily_core.tasks"]
 
 [tool.setuptools.package-data]
 nonebot_plugin_mysdaily = []
-miyouqian = ["templates/*"]
+mysdaily_core = ["templates/*"]
 
 [tool.nonebot]
 plugins = ["nonebot_plugin_mysdaily"]
