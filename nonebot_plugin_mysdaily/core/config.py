@@ -408,10 +408,18 @@ def find_account(config: dict[str, Any], name: str | None = None) -> dict[str, A
     for account in accounts:
         if str(account.get("stuid") or "").strip() == name.strip():
             return account
-    # 群聊账号后缀匹配（如 "default" 匹配 "qq_123456789_default"）
+    # 按 QQ 号匹配（匹配所有该 QQ 号的账号中的第一个）
+    for account in accounts:
+        if str(account.get("qq_user_id") or "").strip() == name.strip():
+            return account
+    # QQ 号作为名字使用（如 "123456789" 匹配 "qq_123456789"）
+    for account in accounts:
+        if account.get("name") == f"qq_{name}":
+            return account
+    # 多账号后缀匹配（如 "alt" 匹配 "qq_123456789_alt"）
     for account in accounts:
         account_name = account.get("name", "")
-        if account_name.endswith(f"_{name}"):
+        if account_name.startswith("qq_") and account_name.endswith(f"_{name}"):
             return account
     raise ValueError(f"未找到账号: {name}")
 

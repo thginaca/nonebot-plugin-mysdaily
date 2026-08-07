@@ -2,7 +2,7 @@
 """QQ 指令处理器。
 
 权限：任何人可触发所有指令。
-所有 login 均强制绑定 QQ 号（qq_{user_id}_{base}），确保不同用户互不覆盖。
+所有 login 均强制绑定 QQ 号（qq_{user_id}），需要多账号时加后缀（qq_{user_id}_{name}）。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
@@ -124,14 +124,19 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
         await bot.send(event, "当前没有配置任何账号，请先使用 login 扫码登录")
         return
 
-    # 筛选：支持按账号名、游戏 UID，或群聊后缀（如 "default" 匹配 "qq_xxx_default"）过滤
+    # 筛选：支持按完整账号名、UID，或QQ号匹配
     filter_text = args[0] if args else None
     if filter_text:
         matched = []
         for acc in accounts:
             name = acc.get("name", "")
             uid = str(acc.get("stuid", ""))
-            if name == filter_text or uid == filter_text or name.endswith(f"_{filter_text}"):
+            qq_id = acc.get("qq_user_id", "")
+            if name == filter_text or uid == filter_text:
+                matched.append(acc)
+            elif qq_id == filter_text or name == f"qq_{filter_text}":
+                matched.append(acc)
+            elif qq_id and name.startswith(f"qq_{qq_id}_{filter_text}"):
                 matched.append(acc)
         if not matched:
             await bot.send(event, f"未找到匹配账号：{filter_text}")
@@ -144,11 +149,10 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
         uid = acc.get("stuid", "")
         cookie_ok = "✅" if acc.get("cookie") else "❌"
         qq_id = acc.get("qq_user_id", "")
-        # 简化显示：qq_123456789_default → default [QQ:123456789]
+        # 简化显示：qq_123456789 → 123456789, qq_123456789_alt → 123456789_alt
         display_name = name
-        if qq_id and name.startswith(f"qq_{qq_id}_"):
-            display_name = name[len(f"qq_{qq_id}_"):]
-            display_name += f" [QQ:{qq_id}]"
+        if qq_id and name.startswith(f"qq_{qq_id}"):
+            display_name = name[len("qq_"):]
         line = f"{idx}. {display_name} (UID: {uid or '未登录'}) {cookie_ok}"
         lines.append(line)
 
@@ -185,10 +189,12 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     device = config["device"]
     timeout = plugin_config_login_timeout()
 
-    # 统一用 QQ 号绑定账号名，防止不同用户互相覆盖
+    # 用 QQ 号绑定账号名，防止不同用户互相覆盖
     qq_user_id = str(event.user_id)
-    base_name = args[0] if args else "default"
-    account_name = f"qq_{qq_user_id}_{base_name}"
+    if args:
+        account_name = f"qq_{qq_user_id}_{args[0]}"
+    else:
+        account_name = f"qq_{qq_user_id}"
 
     # 检查是否已有同名账号（如果 UID 不同，提醒用户）
     existing = None
