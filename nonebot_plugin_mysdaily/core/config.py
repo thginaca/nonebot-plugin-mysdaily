@@ -400,8 +400,18 @@ def find_account(config: dict[str, Any], name: str | None = None) -> dict[str, A
         raise ValueError("配置中没有账号")
     if name is None:
         return accounts[0]
+    # 精确匹配完整名字
     for account in accounts:
         if account.get("name") == name:
+            return account
+    # 按 UID 匹配
+    for account in accounts:
+        if str(account.get("stuid") or "").strip() == name.strip():
+            return account
+    # 群聊账号后缀匹配（如 "default" 匹配 "qq_123456789_default"）
+    for account in accounts:
+        account_name = account.get("name", "")
+        if account_name.endswith(f"_{name}"):
             return account
     raise ValueError(f"未找到账号: {name}")
 
