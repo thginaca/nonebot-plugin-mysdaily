@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """QQ 指令处理器。
 
-权限：任何人可触发所有指令。
+权限：任何人可触发 run/status/toggle/reload；login 仅限私聊。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
@@ -10,7 +10,7 @@
     /myq run --bbs             仅执行米游币社区任务
     /myq run --game genshin    仅执行指定游戏（可重复）
     /myq status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）
-    /myq login [账号名]         扫码登录
+    /myq login [账号名]         扫码登录（仅私聊）
     /myq toggle game|cloud|bbs on|off
     /myq reload                重载配置并重新注册定时任务
 """
@@ -27,9 +27,11 @@ import qrcode
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import (
     Bot,
+    GroupMessageEvent,
     Message,
     MessageEvent,
     MessageSegment,
+    PrivateMessageEvent,
 )
 from nonebot.log import logger
 from nonebot.params import CommandArg
@@ -351,6 +353,9 @@ def register_matchers(command: str) -> None:
         elif sub in ("status", "状态", "st"):
             await _handle_status(bot, event, rest)
         elif sub in ("login", "登录", "扫码"):
+            if isinstance(event, GroupMessageEvent):
+                await bot.send(event, "⚠️ 扫码登录仅限私聊使用，请在私聊中发送 login 指令")
+                return
             await _handle_login(bot, event, rest)
         elif sub in ("toggle", "开关"):
             await _handle_toggle(bot, event, rest)
