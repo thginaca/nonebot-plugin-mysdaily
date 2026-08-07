@@ -56,7 +56,7 @@ from .scheduler import reload_daily_job
 # ---------------------------------------------------------------------------
 async def _group_admin(event: MessageEvent) -> bool:
     if isinstance(event, GroupMessageEvent):
-        return event.role in ("admin", "owner")
+        return event.sender.role in ("admin", "owner")
     return False
 
 
