@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """MysDaily NoneBot2 插件。
 
-把原 `mysdaily_core` 库适配为 NoneBot 插件：
+把原核心库适配为 NoneBot 插件：
 - 复用现有签到/登录/推送逻辑（同步，通过 run_in_executor 调用）
 - 用 nonebot_plugin_apscheduler 管理每日定时签到
 - 提供 QQ 指令：run / status / login / toggle / reload

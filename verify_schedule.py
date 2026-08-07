@@ -7,12 +7,7 @@ import yaml
 root = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(root))
 
-# 1. 验证 DEFAULT_CONFIG 中的默认值
-from mysdaily_core.core.config import DEFAULT_CONFIG
-sched = DEFAULT_CONFIG["schedule"]
-print(f'DEFAULT_CONFIG schedule: enable={sched["enable"]}, time={sched["time"]}, jitter={sched["jitter_minutes"]}')
-assert sched["time"] == "00:00", 'time should be 00:00'
-assert sched["jitter_minutes"] == 30, 'jitter should be 30'
+# 1. 验证 DEFAULT_CONFIG 中的默认值（移到 nonebot.init() 之后）
 
 # 2. 验证 config.example.yaml 的默认值
 example_path = root / 'config.example.yaml'
@@ -31,6 +26,14 @@ driver = nonebot.get_driver()
 driver.register_adapter(OneBotV11Adapter)
 
 # 现在可以安全导入插件了
+from nonebot_plugin_mysdaily.core.config import DEFAULT_CONFIG
+
+# 1. 验证 DEFAULT_CONFIG 中的默认值
+sched = DEFAULT_CONFIG["schedule"]
+print(f'DEFAULT_CONFIG schedule: enable={sched["enable"]}, time={sched["time"]}, jitter={sched["jitter_minutes"]}')
+assert sched["time"] == "00:00", 'time should be 00:00'
+assert sched["jitter_minutes"] == 30, 'jitter should be 30'
+
 from nonebot_plugin_mysdaily.scheduler import _parse_time, resolve_schedule
 from nonebot_plugin_mysdaily.config import Config
 

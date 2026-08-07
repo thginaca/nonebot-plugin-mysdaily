@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """任务执行异步包装与结果回发。
 
-原 `mysdaily_core.service.runner.run_tasks` 是同步阻塞调用（内部使用 httpx.Client），
+原 `nonebot_plugin_mysdaily.service.runner.run_tasks` 是同步阻塞调用（内部使用 httpx.Client），
 在 NoneBot 异步事件循环中必须通过 `run_in_executor` 放到线程池执行。
 
 执行完成后：
@@ -20,10 +20,10 @@ from typing import Any, Optional
 from nonebot.adapters.onebot.v11 import Bot, Event, MessageSegment
 from nonebot.log import logger
 
-from mysdaily_core.core.config import load_config, log_path
-from mysdaily_core.core.logs import append_log, configure_logger, format_line
-from mysdaily_core.service.notifier import is_task_success, send_push
-from mysdaily_core.service.runner import run_tasks
+from .core.config import load_config, log_path
+from .core.logs import append_log, configure_logger, format_line
+from .service.notifier import is_task_success, send_push
+from .service.runner import run_tasks
 
 
 class MiyoQianRuntime:

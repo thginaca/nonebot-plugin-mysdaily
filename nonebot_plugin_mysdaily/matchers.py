@@ -34,15 +34,15 @@ from nonebot.adapters.onebot.v11 import (
 from nonebot.log import logger
 from nonebot.params import CommandArg
 
-from mysdaily_core.auth.login import QRLogin
-from mysdaily_core.core import cookies
-from mysdaily_core.core.config import (
+from .auth.login import QRLogin
+from .core import cookies
+from .core.config import (
     find_account,
     load_config,
     save_config,
     upsert_account,
 )
-from mysdaily_core.core.http import ApiClient
+from .core.http import ApiClient
 
 from .runner import get_runtime
 from .scheduler import reload_daily_job

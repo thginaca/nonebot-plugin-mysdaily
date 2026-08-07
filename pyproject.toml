@@ -44,11 +44,10 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["nonebot_plugin_mysdaily", "mysdaily_core", "mysdaily_core.auth", "mysdaily_core.core", "mysdaily_core.service", "mysdaily_core.tasks"]
+packages = ["nonebot_plugin_mysdaily", "nonebot_plugin_mysdaily.auth", "nonebot_plugin_mysdaily.core", "nonebot_plugin_mysdaily.service", "nonebot_plugin_mysdaily.tasks"]
 
 [tool.setuptools.package-data]
-nonebot_plugin_mysdaily = []
-mysdaily_core = ["templates/*"]
+nonebot_plugin_mysdaily = ["templates/*"]
 
 [tool.nonebot]
 plugins = ["nonebot_plugin_mysdaily"]

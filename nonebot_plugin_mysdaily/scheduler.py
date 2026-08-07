@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """基于 nonebot_plugin_apscheduler 的每日签到调度。
 
-替代原 `mysdaily_core.service.scheduler.DailyScheduler`（基于 threading），
+替代原 `nonebot_plugin_mysdaily.service.scheduler.DailyScheduler`（基于 threading），
 与 NoneBot 生命周期一致，无需额外线程，重启 bot 即重新注册任务。
 """
 
