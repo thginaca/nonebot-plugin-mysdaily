@@ -1,12 +1,12 @@
 [project]
-name = "nonebot-plugin-mysdaily"
+name = "nonebot-plugin-miyouqian"
 version = "0.1.0"
-description = "MysDaily NoneBot2 插件：米游社每日签到、云游戏签到、米游币任务、商品兑换"
+description = "米游签 NoneBot2 插件：米游社签到、云游戏签到、米游币任务、商品兑换"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "MiyoQian" }]
-keywords = ["nonebot", "nonebot2", "mihoyo", "mihoyobbs", "genshin", "checkin", "daily", "bot", "qq", "onebot"]
+keywords = ["nonebot", "nonebot2", "mihoyo", "mihoyobbs", "genshin", "checkin", "bot", "qq", "onebot"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: Robot Framework",
@@ -35,9 +35,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/thginaca/nonebot-plugin-mysdaily"
-Repository = "https://github.com/thginaca/nonebot-plugin-mysdaily"
-Issues = "https://github.com/thginaca/nonebot-plugin-mysdaily/issues"
+Homepage = "https://github.com/marchen-orz/MiyoQian"
+Repository = "https://github.com/marchen-orz/MiyoQian"
+Issues = "https://github.com/marchen-orz/MiyoQian/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

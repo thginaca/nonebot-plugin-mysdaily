@@ -21,6 +21,14 @@
 
 ### 请勿在其他平台宣传本项目，请不要大范围传播本项目！！！
 
+### 交流群
+
+如果你有兴趣参与开发，或者在使用过程中遇到问题，可以加入交流群：
+
+<p align="center">
+  <img src="./assets/QQ_qrcode.jpg" alt="QQ群" width="300">
+</p>
+
 ## 功能
 
 - 米游社 APP 扫码登录（QQ 私聊扫码，无需浏览器）
@@ -78,14 +86,42 @@ copy .env.example .env
 ```env
 # 超级用户（你的 QQ 号，用于触发指令）
 SUPERUSERS=["你的QQ号"]
-
-# 加载插件
-PLUGINS=["nonebot_plugin_mysdaily"]
 ```
 
-如果你使用 OneBot V11 适配器（go-cqhttp / Lagrange / NapCat 等），还需要在 `.env` 或 `nonebot` 配置中正确设置连接方式。
+### 4. 加载插件（二选一，不能同时用）
 
-### 4. 启动机器人
+**方式 A：通过 `bot.py` 中的 `require()` 加载（推荐）**
+
+在你的 `bot.py` 中添加：
+
+```python
+import nonebot
+from nonebot.adapters.onebot.v11 import Adapter as OneBotV11Adapter
+
+nonebot.init()
+driver = nonebot.get_driver()
+driver.register_adapter(OneBotV11Adapter)
+
+# 加载本插件
+nonebot.require("nonebot_plugin_mysdaily")
+
+nonebot.run()
+```
+
+使用这种方式时，**不要**在 `.env` 的 `PLUGINS` 中再写 `nonebot_plugin_mysdaily`。
+
+**方式 B：通过 `pyproject.toml` 加载**
+
+在 `pyproject.toml` 中添加：
+
+```toml
+[tool.nonebot]
+plugins = ["nonebot_plugin_mysdaily"]
+```
+
+使用这种方式时，**不要**在 `bot.py` 中再调用 `require("nonebot_plugin_mysdaily")`，也不要在 `.env` 的 `PLUGINS` 中重复配置。
+
+### 5. 启动机器人
 
 ```bash
 python bot.py
