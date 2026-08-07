@@ -44,7 +44,7 @@ def resolve_schedule(config_yaml: dict, plugin_config: Config) -> tuple[bool, st
     jitter = (
         plugin_config.miyouqian_schedule_jitter
         if plugin_config.miyouqian_schedule_jitter > 0
-        else int(sched.get("jitter_minutes", 45) or 0)
+        else int(sched.get("jitter_minutes", 30) or 0)
     )
     return enable, time_str, max(jitter, 0)
 

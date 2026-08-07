@@ -1,8 +1,8 @@
-# 米游签（MiyoQian）— NoneBot2 插件
+# MiyoQian — NoneBot2 插件
 
 <div align="center">
   <h1 align="center">
-    米游签
+    MiyoQian
   </h1>
   <p>米游社签到、云游戏签到、米游币任务、商品兑换 —— 作为 NoneBot2 插件运行，QQ 指令触发，每日自动执行</p>
   <p>
@@ -17,17 +17,13 @@
 
 ## 简介
 
-米游签是一款基于 NoneBot2 的米游社自动签到插件。你只需要在 QQ 里给机器人发一条指令，就能完成扫码登录、立即签到、查看状态等所有操作；配合 `nonebot-plugin-apscheduler`，插件会在后台每天定时执行签到任务，结果通过配置的推送渠道发送。
+MiyoQian 是一款基于 NoneBot2 的米游社自动签到插件。你只需要在 QQ 里给机器人发一条指令，就能完成扫码登录、立即签到、查看状态等所有操作；配合 `nonebot-plugin-apscheduler`，插件会在后台每天定时执行签到任务，结果通过配置的推送渠道发送。
+
+> **原作者**: [marchen-orz](https://github.com/marchen-orz/MiyoQian)
+>
+> 本项目基于原作者的 [MiyoQian](https://github.com/marchen-orz/MiyoQian) 项目改造，适配为 NoneBot2 插件。原项目的版权归原作者所有。
 
 ### 请勿在其他平台宣传本项目，请不要大范围传播本项目！！！
-
-### 交流群
-
-如果你有兴趣参与开发，或者在使用过程中遇到问题，可以加入交流群：
-
-<p align="center">
-  <img src="./assets/QQ_qrcode.jpg" alt="QQ群" width="300">
-</p>
 
 ## 功能
 
@@ -157,18 +153,18 @@ python bot.py
 
 机器人会回复签到结果。如果提示"今日已签到"，说明配置正确。
 
-### 7. 开启每日自动签到
+### 5. 开启每日自动签到
 
 编辑 `nonebot_plugin_mysdaily/config.yaml`：
 
 ```yaml
 schedule:
   enable: true
-  time: "09:00"
-  jitter_minutes: 45
+  time: "00:00"
+  jitter_minutes: 30
 ```
 
-重启机器人后，每天 09:00 ~ 09:45 之间会自动执行签到。
+重启机器人后，每天 00:00 ~ 00:30 之间会自动执行签到。
 
 ---
 
@@ -369,8 +365,8 @@ shop_exchange:
 ```yaml
 schedule:
   enable: true
-  time: "09:00"
-  jitter_minutes: 45
+  time: "00:00"
+  jitter_minutes: 30
 ```
 
 | 设置 | 说明 |
@@ -385,7 +381,7 @@ schedule:
 
 ```env
 MIYOUQIAN_SCHEDULE_ENABLE=true
-MIYOUQIAN_SCHEDULE_TIME=09:30
+MIYOUQIAN_SCHEDULE_TIME=00:00
 MIYOUQIAN_SCHEDULE_JITTER=30
 ```
 
@@ -542,8 +538,8 @@ games:
 ```yaml
 schedule:
   enable: true
-  time: "09:00"
-  jitter_minutes: 45
+  time: "00:00"
+  jitter_minutes: 30
 ```
 
 ### 网络访问
@@ -578,7 +574,7 @@ schedule:
 
 ### 签到提示首次绑定怎么办？
 
-部分游戏第一次绑定签到活动时，需要先在米游社或活动页面手动签到一次。手动完成后，后续再交给米游签执行。
+部分游戏第一次绑定签到活动时，需要先在米游社或活动页面手动签到一次。手动完成后，后续再交给 MiyoQian 执行。
 
 ### 遇到验证码怎么办？
 
