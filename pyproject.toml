@@ -35,9 +35,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/marchen-orz/MiyoQian"
-Repository = "https://github.com/marchen-orz/MiyoQian"
-Issues = "https://github.com/marchen-orz/MiyoQian/issues"
+Homepage = "https://github.com/thginaca/nonebot-plugin-mysdaily"
+Repository = "https://github.com/thginaca/nonebot-plugin-mysdaily"
+Issues = "https://github.com/thginaca/nonebot-plugin-mysdaily/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
