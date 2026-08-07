@@ -177,7 +177,22 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     device = config["device"]
     timeout = plugin_config_login_timeout()
 
-    await bot.send(event, f"正在为账号 {account_name} 生成二维码，请稍候…")
+    # 检查是否已有同名账号（如果 UID 不同，提醒用户）
+    existing = None
+    for acc in config.get("accounts", []):
+        if acc.get("name") == account_name:
+            existing = acc
+            break
+    if existing:
+        existing_uid = existing.get("stuid", "")
+        await bot.send(
+            event,
+            f"⚠️ 已存在名为「{account_name}」的账号 (UID: {existing_uid})\n"
+            f"扫码登录将覆盖此账号。如需绑定新账号，请使用其他名字，如：\n"
+            f"  /myq login {account_name}2",
+        )
+    else:
+        await bot.send(event, f"正在为账号 {account_name} 生成二维码，请稍候…")
 
     loop = asyncio.get_running_loop()
     holder: dict = {}
@@ -211,12 +226,17 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
 
     # 重新加载最新配置并写入凭证
     config = runtime.load_config()
+    old_count = len(config.get("accounts", []))
     upsert_account(config, account_name, account_data)
     save_config(runtime.config_path, config)
-    await bot.send(
-        event,
-        f"✅ 账号 {account_name} 登录成功 (UID: {account_data.get('stuid', '')})，凭证已保存",
-    )
+    new_count = len(config.get("accounts", []))
+    uid = account_data.get("stuid", "")
+    msg = f"✅ 账号 {account_name} 登录成功 (UID: {uid})"
+    if new_count > old_count:
+        msg += f"，当前共 {new_count} 个账号"
+    else:
+        msg += "，已更新凭证"
+    await bot.send(event, msg)
 
 
 async def _handle_toggle(bot: Bot, event: MessageEvent, args: list[str]) -> None:

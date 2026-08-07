@@ -135,10 +135,32 @@ def normalize_config(config: dict[str, Any]) -> None:
     accounts = config.setdefault("accounts", [])
     if isinstance(accounts, dict):
         config["accounts"] = [accounts]
-    for index, account in enumerate(config["accounts"], start=1):
-        account["name"] = str(account.get("name") or "")[:10]
+    # 清理重复账号：按名字和 UID 去重
+    seen_names: dict[str, dict[str, Any]] = {}
+    seen_uids: dict[str, dict[str, Any]] = {}
+    deduped: list[dict[str, Any]] = []
+    for account in config["accounts"]:
+        name = str(account.get("name") or "").strip()
+        uid = str(account.get("stuid") or "").strip()
+        account["name"] = name[:10]
+        # 如果 UID 已存在，合并到已有账号
+        if uid and uid in seen_uids:
+            existing = seen_uids[uid]
+            existing.update(account)
+            continue
+        # 如果名字已存在（且 UID 不同），合并到已有账号
+        if name and name in seen_names:
+            existing = seen_names[name]
+            existing.update(account)
+            continue
         for field in SENSITIVE_ACCOUNT_FIELDS:
             account.setdefault(field, "")
+        deduped.append(account)
+        if name:
+            seen_names[name] = account
+        if uid:
+            seen_uids[uid] = account
+    config["accounts"] = deduped
     device = config.setdefault("device", {})
     first_cookie = str(config["accounts"][0].get("cookie", "")) if config["accounts"] else ""
     presets = device.setdefault("presets", copy.deepcopy(DEFAULT_DEVICE_PRESETS))
@@ -387,15 +409,25 @@ def find_account(config: dict[str, Any], name: str | None = None) -> dict[str, A
 def upsert_account(config: dict[str, Any], name: str, data: dict[str, Any]) -> dict[str, Any]:
     accounts = config.setdefault("accounts", [])
     new_uid = str(data.get("stuid") or "").strip()
+    new_name = name.strip()
+
+    # 优先按 UID 查找（跨名字合并，防止重复）
     if new_uid:
         for account in accounts:
-            if account.get("name") != name and str(account.get("stuid") or "").strip() == new_uid:
-                raise ValueError(f"UID {new_uid} 已存在，不能重复添加同一账号")
+            if str(account.get("stuid") or "").strip() == new_uid:
+                if account.get("name") != new_name:
+                    account["name"] = new_name
+                account.update(data)
+                return account
+
+    # 再按名字查找（更新已有账号）
     for account in accounts:
-        if account.get("name") == name:
+        if str(account.get("name") or "").strip() == new_name:
             account.update(data)
             return account
-    account = {"name": name, **data}
+
+    # 都没找到，追加新账号
+    account = {"name": new_name, **data}
     accounts.append(account)
     return account
 
