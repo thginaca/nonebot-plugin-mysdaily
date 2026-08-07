@@ -60,13 +60,10 @@ class GameCheckin:
         success: list[str] = []
         failed: list[str] = []
         skipped: list[str] = []
-        self._add(messages, f"== {name} ==")
-        self._add(messages, f"正在获取{name}绑定角色")
         roles = self._get_roles(game)
         if not roles:
-            self._add(messages, "未找到绑定角色")
-            skipped.append(f"{name}: 未找到绑定角色")
             return {"messages": messages, "success": success, "failed": failed, "skipped": skipped}
+        self._add(messages, f"== {name} ==")
         self._add(messages, f"正在获取{name}签到奖励列表")
         awards = self._get_awards(game)
         blacklist = set(self.config.get("games", {}).get("black_list", {}).get(game_key, []))
