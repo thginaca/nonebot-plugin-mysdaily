@@ -153,18 +153,20 @@ python bot.py
 
 机器人会回复签到结果。如果提示"今日已签到"，说明配置正确。
 
-### 5. 开启每日自动签到
+### 5. 配置每日自动签到
+
+定时签到默认已开启，每天 00:00 执行。如需修改时间或关闭：
 
 编辑 `nonebot_plugin_mysdaily/config.yaml`：
 
 ```yaml
 schedule:
-  enable: true
-  time: "00:00"
-  jitter_minutes: 30
+  enable: true       # 设为 false 可关闭
+  time: "00:00"      # 每日执行时间
+  jitter_minutes: 30  # 随机波动范围（分钟）
 ```
 
-重启机器人后，每天 00:00 ~ 00:30 之间会自动执行签到。
+重启机器人后生效。每天 00:00 ~ 00:30 之间会自动执行签到。
 
 ---
 
@@ -175,12 +177,12 @@ schedule:
 | 指令 | 说明 |
 | --- | --- |
 | `/myq` | 显示帮助 |
-| `/myq run [账号名]` | 立即执行签到（可选指定账号） |
+| `/myq run [账号名]` | 立即执行签到（不填则全体账号） |
 | `/myq run --games` | 仅执行游戏社区/云游戏签到 |
 | `/myq run --bbs` | 仅执行米游币社区任务 |
 | `/myq run --game genshin` | 仅执行指定游戏（可重复） |
-| `/myq status` | 查看账号、任务开关、调度状态 |
-| `/myq login [账号名]` | 扫码登录（仅私聊） |
+| `/myq status [UID\|账号名]` | 查看账号状态（可按 UID 或名称筛选） |
+| `/myq login [账号名]` | 扫码登录 |
 | `/myq toggle game on` | 开关游戏社区签到 |
 | `/myq toggle cloud on` | 开关云游戏签到 |
 | `/myq toggle bbs on` | 开关米游币任务 |
@@ -188,10 +190,7 @@ schedule:
 
 ### 权限
 
-- **超级用户**（`.env` 中 `SUPERUSERS` 配置的 QQ 号）：所有指令
-- **群管理员/群主**：`run` / `status` / `toggle` / `reload`
-- **普通群成员**：无法触发指令
-- **扫码登录**：仅支持私聊
+所有指令对任何人开放，无需特殊权限。
 
 ### 环境变量覆盖
 
@@ -360,18 +359,18 @@ shop_exchange:
 
 ## 定时签到配置
 
-编辑 `config.yaml`：
+定时签到默认已开启。编辑 `config.yaml`：
 
 ```yaml
 schedule:
-  enable: true
-  time: "00:00"
-  jitter_minutes: 30
+  enable: true       # 默认已开启，设为 false 关闭
+  time: "00:00"      # 每日执行时间
+  jitter_minutes: 30  # 随机波动分钟数
 ```
 
 | 设置 | 说明 |
 | --- | --- |
-| `enable` | 是否开启每日自动执行 |
+| `enable` | 是否开启每日自动执行（默认 true） |
 | `time` | 每天的基准执行时间 |
 | `jitter_minutes` | 随机延后分钟数，用于分散请求 |
 
@@ -560,13 +559,13 @@ schedule:
 
 ### 扫码登录没收到二维码？
 
-扫码登录必须在私聊中使用。如果在群聊中触发，机器人会提示"扫码登录请私聊"。
+扫码登录支持在私聊和群聊中使用。
 
 ### 定时签到没有执行？
 
 请检查：
 
-1. `config.yaml` 中 `schedule.enable` 是否为 `true`
+1. `config.yaml` 中 `schedule.enable` 是否为 `true`（默认已开启）
 2. 当前时间是否已经过了今天的执行窗口
 3. 机器人是否在运行
 4. 发送 `/myq status` 查看调度状态

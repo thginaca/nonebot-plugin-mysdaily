@@ -5,11 +5,11 @@
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
-    /myq run [账号名]           立即执行签到（可选指定账号）
+    /myq run [账号名]           立即执行签到（不填则全体账号）
     /myq run --games           仅执行游戏社区/云游戏签到
     /myq run --bbs             仅执行米游币社区任务
     /myq run --game genshin    仅执行指定游戏（可重复）
-    /myq status                查看账号、任务开关、下次执行时间
+    /myq status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）
     /myq login [账号名]         扫码登录
     /myq toggle game|cloud|bbs on|off
     /myq reload                重载配置并重新注册定时任务
@@ -61,11 +61,11 @@ def _help_text(command: str) -> str:
     return (
         f"MiyoQian 指令帮助（前缀 {command}）\n"
         f"  {command}                      显示本帮助\n"
-        f"  {command} run [账号名]           立即执行签到\n"
+        f"  {command} run [账号名]           立即执行签到（不填则全体账号）\n"
         f"  {command} run --games           仅执行游戏社区/云游戏签到\n"
         f"  {command} run --bbs             仅执行米游币社区任务\n"
         f"  {command} run --game <name>     仅执行指定游戏（可重复）\n"
-        f"  {command} status                查看账号与调度状态\n"
+        f"  {command} status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）\n"
         f"  {command} login [账号名]         扫码登录\n"
         f"  {command} toggle game|cloud|bbs on|off\n"
         f"  {command} reload                重载配置与定时任务\n"
@@ -115,13 +115,25 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     )
 
 
-async def _handle_status(bot: Bot, event: MessageEvent) -> None:
+async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     runtime = get_runtime()
     config = runtime.load_config()
     accounts = config.get("accounts", [])
     if not accounts:
         await bot.send(event, "当前没有配置任何账号，请先使用 login 扫码登录")
         return
+
+    # 筛选：支持按账号名或游戏 UID（stuid）过滤
+    filter_text = args[0] if args else None
+    if filter_text:
+        matched = [
+            acc for acc in accounts
+            if acc.get("name") == filter_text or str(acc.get("stuid", "")) == filter_text
+        ]
+        if not matched:
+            await bot.send(event, f"未找到匹配账号：{filter_text}")
+            return
+        accounts = matched
 
     lines = ["【账号列表】"]
     for idx, acc in enumerate(accounts, 1):
@@ -317,7 +329,7 @@ def register_matchers(command: str) -> None:
         if sub in ("run", "执行", "签到"):
             await _handle_run(bot, event, rest)
         elif sub in ("status", "状态", "st"):
-            await _handle_status(bot, event)
+            await _handle_status(bot, event, rest)
         elif sub in ("login", "登录", "扫码"):
             await _handle_login(bot, event, rest)
         elif sub in ("toggle", "开关"):

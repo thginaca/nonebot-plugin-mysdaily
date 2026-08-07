@@ -44,7 +44,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "max_retries": 3,
         "channels": [{"provider": "damagou", "enable": False, "userkey": "", "type": "", "timeout": 60}],
     },
-    "schedule": {"enable": False, "time": "00:00", "jitter_minutes": 30},
+    "schedule": {"enable": True, "time": "00:00", "jitter_minutes": 30},
     "games": {
         "enabled": ["genshin", "starrail", "zzz"],
         "black_list": {"genshin": [], "starrail": [], "zzz": []},

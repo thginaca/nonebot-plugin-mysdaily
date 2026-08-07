@@ -35,7 +35,7 @@ def resolve_schedule(config_yaml: dict, plugin_config: Config) -> tuple[bool, st
     enable = (
         plugin_config.mysdaily_schedule_enable
         if plugin_config.mysdaily_schedule_enable is not None
-        else bool(sched.get("enable", False))
+        else bool(sched.get("enable", True))
     )
     time_str = (
         plugin_config.mysdaily_schedule_time.strip()
