@@ -2,16 +2,16 @@
 """QQ 指令处理器。
 
 权限：任何人可触发所有指令。
-所有 login 均强制绑定 QQ 号（qq_{user_id}），需要多账号时加后缀（qq_{user_id}_{name}）。
+所有指令自动按发送者 QQ 号筛选账号，用户只能操作自己绑定的账号。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
-    /myq run [账号名]           立即执行签到（不填则全体账号）
+    /myq run [子账号名]        执行我的签到（不填则我的全部账号）
     /myq run --games           仅执行游戏社区/云游戏签到
     /myq run --bbs             仅执行米游币社区任务
     /myq run --game genshin    仅执行指定游戏（可重复）
-    /myq status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）
-    /myq login [账号名]         扫码登录（自动绑定QQ号）
+    /myq status                查看我的账号状态
+    /myq login [子账号名]      扫码登录（自动绑定我的QQ号）
     /myq toggle game|cloud|bbs on|off
     /myq reload                重载配置与定时任务
 """
@@ -26,6 +26,7 @@ from typing import Optional
 
 import qrcode
 from nonebot import on_command
+from nonebot.permission import SUPERUSER
 from nonebot.adapters.onebot.v11 import (
     Bot,
     Message,
@@ -62,20 +63,23 @@ def _help_text(command: str) -> str:
     return (
         f"MiyoQian 指令帮助（前缀 {command}）\n"
         f"  {command}                      显示本帮助\n"
-        f"  {command} run [账号名]           立即执行签到（不填则全体账号）\n"
+        f"  {command} run [子账号名]        执行我的签到（不填则我的全部账号）\n"
         f"  {command} run --games           仅执行游戏社区/云游戏签到\n"
         f"  {command} run --bbs             仅执行米游币社区任务\n"
         f"  {command} run --game <name>     仅执行指定游戏（可重复）\n"
-        f"  {command} status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）\n"
-        f"  {command} login [账号名]         扫码登录（自动绑定QQ号）\n"
+        f"  {command} status                查看我的账号状态\n"
+        f"  {command} login [子账号名]      扫码登录（自动绑定我的QQ号）\n"
         f"  {command} toggle game|cloud|bbs on|off\n"
         f"  {command} reload                重载配置与定时任务\n"
+        f"  {command} runall                [Bot主] 一键执行全体签到\n"
+        f"  {command} statusall             [Bot主] 查看所有人账号状态\n"
     )
 
 
 async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     runtime = get_runtime()
-    account: Optional[str] = None
+    qq_user_id = str(event.user_id)
+    sub_account: Optional[str] = None  # 用户指定的子账号名（如 alt）
     games_only = False
     bbs_only = False
     only_games: list[str] = []
@@ -93,8 +97,8 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
             else:
                 await bot.send(event, "参数 --game 需要指定游戏名")
                 return
-        elif not arg.startswith("-") and account is None:
-            account = arg
+        elif not arg.startswith("-") and sub_account is None:
+            sub_account = arg
         else:
             await bot.send(event, f"未识别的参数: {arg}")
             return
@@ -104,7 +108,25 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
         await bot.send(event, "--games 和 --bbs 不能同时使用")
         return
 
-    await bot.send(event, "⏳ 开始执行 MiyoQian 任务，请稍候…")
+    # 自动按发送者 QQ 号匹配账号
+    # sub_account=None → 执行该用户所有账号
+    # sub_account="alt" → 执行 qq_{qq_user_id}_alt
+    account = None
+    config = runtime.load_config()
+    user_accounts = [a for a in config.get("accounts", []) if a.get("qq_user_id") == qq_user_id]
+    if not user_accounts:
+        await bot.send(event, "你还没有绑定账号，请先使用 login 扫码登录")
+        return
+    if sub_account:
+        account = f"qq_{qq_user_id}_{sub_account}"
+        # 确认该子账号存在
+        if not any(a.get("name") == account for a in user_accounts):
+            await bot.send(event, f"未找到你的账号: {sub_account}\n你绑定的账号: {', '.join(a.get('name','') for a in user_accounts)}")
+            return
+    elif len(user_accounts) == 1:
+        account = user_accounts[0].get("name")
+
+    await bot.send(event, "⏳ 开始执行签到任务，请稍候…")
     await runtime.run_and_notify(
         bot,
         event,
@@ -119,42 +141,24 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
 async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     runtime = get_runtime()
     config = runtime.load_config()
-    accounts = config.get("accounts", [])
+    qq_user_id = str(event.user_id)
+
+    # 只显示当前用户绑定的账号
+    accounts = [a for a in config.get("accounts", []) if a.get("qq_user_id") == qq_user_id]
     if not accounts:
-        await bot.send(event, "当前没有配置任何账号，请先使用 login 扫码登录")
+        await bot.send(event, "你还没有绑定账号，请先使用 login 扫码登录")
         return
 
-    # 筛选：支持按完整账号名、UID，或QQ号匹配
-    filter_text = args[0] if args else None
-    if filter_text:
-        matched = []
-        for acc in accounts:
-            name = acc.get("name", "")
-            uid = str(acc.get("stuid", ""))
-            qq_id = acc.get("qq_user_id", "")
-            if name == filter_text or uid == filter_text:
-                matched.append(acc)
-            elif qq_id == filter_text or name == f"qq_{filter_text}":
-                matched.append(acc)
-            elif qq_id and name.startswith(f"qq_{qq_id}_{filter_text}"):
-                matched.append(acc)
-        if not matched:
-            await bot.send(event, f"未找到匹配账号：{filter_text}")
-            return
-        accounts = matched
-
-    lines = ["【账号列表】"]
+    lines = ["【我的账号】"]
     for idx, acc in enumerate(accounts, 1):
         name = acc.get("name", "未命名")
         uid = acc.get("stuid", "")
         cookie_ok = "✅" if acc.get("cookie") else "❌"
-        qq_id = acc.get("qq_user_id", "")
-        # 简化显示：qq_123456789 → 123456789, qq_123456789_alt → 123456789_alt
-        display_name = name
-        if qq_id and name.startswith(f"qq_{qq_id}"):
-            display_name = name[len("qq_"):]
-        line = f"{idx}. {display_name} (UID: {uid or '未登录'}) {cookie_ok}"
-        lines.append(line)
+        # 显示：qq_123456789 → 主账号, qq_123456789_alt → alt
+        display_name = "主账号"
+        if name.startswith(f"qq_{qq_user_id}_"):
+            display_name = name[len(f"qq_{qq_user_id}_"):]
+        lines.append(f"{idx}. {display_name} (UID: {uid or '未登录'}) {cookie_ok}")
 
     features = config.get("features", {})
     games = config.get("games", {}).get("enabled", [])
@@ -177,6 +181,51 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
     if runtime.running:
         lines.append("\n⏳ 当前有任务正在执行")
     await bot.send(event, "\n".join(lines))
+
+
+async def _handle_statusall(bot: Bot, event: MessageEvent) -> None:
+    """Bot 主专用：查看所有人账号状态。"""
+    runtime = get_runtime()
+    config = runtime.load_config()
+    accounts = config.get("accounts", [])
+    if not accounts:
+        await bot.send(event, "当前没有任何账号")
+        return
+
+    lines = [f"【全体账号】共 {len(accounts)} 个"]
+    for idx, acc in enumerate(accounts, 1):
+        name = acc.get("name", "未命名")
+        uid = acc.get("stuid", "")
+        cookie_ok = "✅" if acc.get("cookie") else "❌"
+        qq_id = acc.get("qq_user_id", "")
+        # 显示：123456789(主) 或 123456789/alt
+        display = qq_id or name
+        if name.startswith(f"qq_{qq_id}_"):
+            display = f"{qq_id}/{name[len(f'qq_{qq_id}_'):]}"
+        elif qq_id and name == f"qq_{qq_id}":
+            display = qq_id
+        lines.append(f"{idx}. {display} (UID: {uid or '未登录'}) {cookie_ok}")
+
+    if runtime.running:
+        lines.append("\n⏳ 当前有任务正在执行")
+    await bot.send(event, "\n".join(lines))
+
+
+async def _handle_runall(bot: Bot, event: MessageEvent) -> None:
+    """Bot 主专用：执行全体账号签到。"""
+    runtime = get_runtime()
+    config = runtime.load_config()
+    if not config.get("accounts"):
+        await bot.send(event, "当前没有任何账号")
+        return
+
+    await bot.send(event, "⏳ 开始执行全体签到任务，请稍候…")
+    await runtime.run_and_notify(
+        bot,
+        event,
+        account=None,
+        reply=True,
+    )
 
 
 async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
@@ -367,6 +416,16 @@ def register_matchers(command: str) -> None:
             await _handle_run(bot, event, rest)
         elif sub in ("status", "状态", "st"):
             await _handle_status(bot, event, rest)
+        elif sub in ("runall", "全体签到"):
+            if not await SUPERUSER(bot, event):
+                await bot.send(event, "⚠️ 该指令仅限 Bot 主人使用")
+                return
+            await _handle_runall(bot, event)
+        elif sub in ("statusall", "全体状态"):
+            if not await SUPERUSER(bot, event):
+                await bot.send(event, "⚠️ 该指令仅限 Bot 主人使用")
+                return
+            await _handle_statusall(bot, event)
         elif sub in ("login", "登录", "扫码"):
             await _handle_login(bot, event, rest)
         elif sub in ("toggle", "开关"):
