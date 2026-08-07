@@ -2,8 +2,7 @@
 """QQ 指令处理器。
 
 权限：任何人可触发所有指令。
-群聊中 login 自动绑定 QQ 号（qq_{user_id}），确保不同用户互不覆盖。
-私聊中 login 默认使用账号名 "main"。
+所有 login 均强制绑定 QQ 号（qq_{user_id}_{base}），确保不同用户互不覆盖。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
@@ -12,9 +11,9 @@
     /myq run --bbs             仅执行米游币社区任务
     /myq run --game genshin    仅执行指定游戏（可重复）
     /myq status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）
-    /myq login [账号名]         扫码登录（仅私聊）
+    /myq login [账号名]         扫码登录（自动绑定QQ号）
     /myq toggle game|cloud|bbs on|off
-    /myq reload                重载配置并重新注册定时任务
+    /myq reload                重载配置与定时任务
 """
 
 from __future__ import annotations
@@ -29,7 +28,6 @@ import qrcode
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import (
     Bot,
-    GroupMessageEvent,
     Message,
     MessageEvent,
     MessageSegment,
@@ -69,7 +67,7 @@ def _help_text(command: str) -> str:
         f"  {command} run --bbs             仅执行米游币社区任务\n"
         f"  {command} run --game <name>     仅执行指定游戏（可重复）\n"
         f"  {command} status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）\n"
-        f"  {command} login [账号名]         扫码登录（群聊自动绑定QQ号）\n"
+        f"  {command} login [账号名]         扫码登录（自动绑定QQ号）\n"
         f"  {command} toggle game|cloud|bbs on|off\n"
         f"  {command} reload                重载配置与定时任务\n"
     )
@@ -146,7 +144,7 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
         uid = acc.get("stuid", "")
         cookie_ok = "✅" if acc.get("cookie") else "❌"
         qq_id = acc.get("qq_user_id", "")
-        # 群聊账号：简化显示，去掉 qq_前缀
+        # 简化显示：qq_123456789_default → default [QQ:123456789]
         display_name = name
         if qq_id and name.startswith(f"qq_{qq_id}_"):
             display_name = name[len(f"qq_{qq_id}_"):]
@@ -187,15 +185,10 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     device = config["device"]
     timeout = plugin_config_login_timeout()
 
-    # 根据消息来源决定账号命名规则
+    # 统一用 QQ 号绑定账号名，防止不同用户互相覆盖
     qq_user_id = str(event.user_id)
-    if isinstance(event, GroupMessageEvent):
-        # 群聊：账号名强制绑定 QQ 号，防止不同用户互相覆盖
-        base_name = args[0] if args else "default"
-        account_name = f"qq_{qq_user_id}_{base_name}"
-    else:
-        # 私聊：使用给定名字或默认 main
-        account_name = args[0] if args else "main"
+    base_name = args[0] if args else "default"
+    account_name = f"qq_{qq_user_id}_{base_name}"
 
     # 检查是否已有同名账号（如果 UID 不同，提醒用户）
     existing = None
@@ -243,16 +236,13 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     # 重新加载最新配置并写入凭证
     config = runtime.load_config()
     old_count = len(config.get("accounts", []))
-    # 群聊登录时绑定 QQ 号，便于区分不同用户
-    if isinstance(event, GroupMessageEvent):
-        account_data["qq_user_id"] = qq_user_id
+    # 绑定 QQ 号，便于区分不同用户
+    account_data["qq_user_id"] = qq_user_id
     upsert_account(config, account_name, account_data)
     save_config(runtime.config_path, config)
     new_count = len(config.get("accounts", []))
     uid = account_data.get("stuid", "")
-    msg = f"✅ 账号 {account_name} 登录成功 (UID: {uid})"
-    if isinstance(event, GroupMessageEvent):
-        msg += f" (QQ: {qq_user_id})"
+    msg = f"✅ 账号 {account_name} 登录成功 (UID: {uid}, QQ: {qq_user_id})"
     if new_count > old_count:
         msg += f"，当前共 {new_count} 个账号"
     else:
