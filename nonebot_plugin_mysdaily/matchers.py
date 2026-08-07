@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """QQ 指令处理器。
 
-权限：任何人可触发 run/status/toggle/reload；login 仅限私聊。
+权限：任何人可触发所有指令。
+群聊中 login 自动绑定 QQ 号（qq_{user_id}），确保不同用户互不覆盖。
+私聊中 login 默认使用账号名 "main"。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
@@ -31,7 +33,6 @@ from nonebot.adapters.onebot.v11 import (
     Message,
     MessageEvent,
     MessageSegment,
-    PrivateMessageEvent,
 )
 from nonebot.log import logger
 from nonebot.params import CommandArg
@@ -68,7 +69,7 @@ def _help_text(command: str) -> str:
         f"  {command} run --bbs             仅执行米游币社区任务\n"
         f"  {command} run --game <name>     仅执行指定游戏（可重复）\n"
         f"  {command} status [UID|账号名]    查看账号状态（可按 UID 或名称筛选）\n"
-        f"  {command} login [账号名]         扫码登录\n"
+        f"  {command} login [账号名]         扫码登录（群聊自动绑定QQ号）\n"
         f"  {command} toggle game|cloud|bbs on|off\n"
         f"  {command} reload                重载配置与定时任务\n"
     )
@@ -142,7 +143,12 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
         name = acc.get("name", "未命名")
         uid = acc.get("stuid", "")
         cookie_ok = "✅" if acc.get("cookie") else "❌"
-        lines.append(f"{idx}. {name} (UID: {uid or '未登录'}) {cookie_ok}")
+        qq_id = acc.get("qq_user_id", "")
+        line = f"{idx}. {name}"
+        if qq_id:
+            line += f" [QQ:{qq_id}]"
+        line += f" (UID: {uid or '未登录'}) {cookie_ok}"
+        lines.append(line)
 
     features = config.get("features", {})
     games = config.get("games", {}).get("enabled", [])
@@ -170,14 +176,21 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
 async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     """扫码登录：在执行器中跑同步 QRLogin，把二维码图片发给触发者。
 
-    二维码 url 与 ticket 必须配对使用，因此 fetch 与 wait 共享同一个 ApiClient
-    和 QRLogin 实例（分两次进入执行器，但任一时刻仅一个线程在用，线程安全）。
+    群聊中账号自动绑定 QQ 号（qq_{user_id}），私聊中使用给定名字或默认 main。
     """
     runtime = get_runtime()
-    account_name = args[0] if args else "main"
     config = runtime.load_config()
     device = config["device"]
     timeout = plugin_config_login_timeout()
+
+    # 根据消息来源决定账号命名规则
+    qq_user_id = str(event.user_id)
+    if isinstance(event, GroupMessageEvent):
+        # 群聊：自动用 QQ 号绑定，确保不同人不会互相覆盖
+        account_name = args[0] if args else f"qq_{qq_user_id}"
+    else:
+        # 私聊：使用给定名字或默认 main
+        account_name = args[0] if args else "main"
 
     # 检查是否已有同名账号（如果 UID 不同，提醒用户）
     existing = None
@@ -187,14 +200,15 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
             break
     if existing:
         existing_uid = existing.get("stuid", "")
-        await bot.send(
-            event,
-            f"⚠️ 已存在名为「{account_name}」的账号 (UID: {existing_uid})\n"
-            f"扫码登录将覆盖此账号。如需绑定新账号，请使用其他名字，如：\n"
-            f"  /myq login {account_name}2",
-        )
+        existing_qq = existing.get("qq_user_id", "")
+        warn_msg = f"⚠️ 已存在名为「{account_name}」的账号 (UID: {existing_uid}"
+        if existing_qq:
+            warn_msg += f", QQ: {existing_qq}"
+        warn_msg += ")\n扫码登录将更新此账号的凭证。"
+        await bot.send(event, warn_msg)
     else:
-        await bot.send(event, f"正在为账号 {account_name} 生成二维码，请稍候…")
+        hint = f" [QQ: {qq_user_id}]" if isinstance(event, GroupMessageEvent) else ""
+        await bot.send(event, f"正在为账号 {account_name}{hint} 生成二维码，请稍候…")
 
     loop = asyncio.get_running_loop()
     holder: dict = {}
@@ -229,11 +243,16 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     # 重新加载最新配置并写入凭证
     config = runtime.load_config()
     old_count = len(config.get("accounts", []))
+    # 群聊登录时绑定 QQ 号，便于区分不同用户
+    if isinstance(event, GroupMessageEvent):
+        account_data["qq_user_id"] = qq_user_id
     upsert_account(config, account_name, account_data)
     save_config(runtime.config_path, config)
     new_count = len(config.get("accounts", []))
     uid = account_data.get("stuid", "")
     msg = f"✅ 账号 {account_name} 登录成功 (UID: {uid})"
+    if isinstance(event, GroupMessageEvent):
+        msg += f" (QQ: {qq_user_id})"
     if new_count > old_count:
         msg += f"，当前共 {new_count} 个账号"
     else:
@@ -353,9 +372,6 @@ def register_matchers(command: str) -> None:
         elif sub in ("status", "状态", "st"):
             await _handle_status(bot, event, rest)
         elif sub in ("login", "登录", "扫码"):
-            if isinstance(event, GroupMessageEvent):
-                await bot.send(event, "⚠️ 扫码登录仅限私聊使用，请在私聊中发送 login 指令")
-                return
             await _handle_login(bot, event, rest)
         elif sub in ("toggle", "开关"):
             await _handle_toggle(bot, event, rest)
