@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """QQ 指令处理器。
 
-权限：超级用户 + 群管理员可触发；私聊仅超级用户。
+权限：任何人可触发所有指令。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MIYOUQIAN_COMMAND 修改）：
     /myq                      显示帮助
@@ -10,7 +10,7 @@
     /myq run --bbs             仅执行米游币社区任务
     /myq run --game genshin    仅执行指定游戏（可重复）
     /myq status                查看账号、任务开关、下次执行时间
-    /myq login [账号名]         扫码登录，二维码私聊发送给触发者
+    /myq login [账号名]         扫码登录
     /myq toggle game|cloud|bbs on|off
     /myq reload                重载配置并重新注册定时任务
 """
@@ -27,15 +27,12 @@ import qrcode
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import (
     Bot,
-    GroupMessageEvent,
     Message,
     MessageEvent,
     MessageSegment,
-    PrivateMessageEvent,
 )
 from nonebot.log import logger
 from nonebot.params import CommandArg
-from nonebot.permission import SUPERUSER, Permission
 
 from miyouqian.auth.login import QRLogin
 from miyouqian.core import cookies
@@ -52,15 +49,9 @@ from .scheduler import reload_daily_job
 
 
 # ---------------------------------------------------------------------------
-# 权限：超级用户 或 群管理员/群主
+# 权限：任何人可触发
 # ---------------------------------------------------------------------------
-async def _group_admin(event: MessageEvent) -> bool:
-    if isinstance(event, GroupMessageEvent):
-        return event.sender.role in ("admin", "owner")
-    return False
-
-
-ADMIN_OR_SUPERUSER = SUPERUSER | Permission(_group_admin)
+ANYONE = None
 
 
 # ---------------------------------------------------------------------------
@@ -163,15 +154,11 @@ async def _handle_status(bot: Bot, event: MessageEvent) -> None:
 
 
 async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
-    """扫码登录：在执行器中跑同步 QRLogin，把二维码图片私聊发给触发者。
+    """扫码登录：在执行器中跑同步 QRLogin，把二维码图片发给触发者。
 
     二维码 url 与 ticket 必须配对使用，因此 fetch 与 wait 共享同一个 ApiClient
     和 QRLogin 实例（分两次进入执行器，但任一时刻仅一个线程在用，线程安全）。
     """
-    if isinstance(event, GroupMessageEvent):
-        await bot.send(event, "为保护账号安全，扫码登录请私聊机器人执行")
-        return
-
     runtime = get_runtime()
     account_name = args[0] if args else "main"
     config = runtime.load_config()
@@ -314,7 +301,7 @@ def plugin_config_login_timeout() -> int:
 def register_matchers(command: str) -> None:
     """根据配置的指令前缀注册主命令。"""
 
-    main = on_command(command, permission=ADMIN_OR_SUPERUSER, priority=10, block=True)
+    main = on_command(command, permission=ANYONE, priority=10, block=True)
 
     @main.handle()
     async def _dispatch(bot: Bot, event: MessageEvent, args: Message = CommandArg()):
