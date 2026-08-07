@@ -1,0 +1,54 @@
+[project]
+name = "nonebot-plugin-miyouqian"
+version = "0.1.0"
+description = "米游签 NoneBot2 插件：米游社签到、云游戏签到、米游币任务、商品兑换"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "MiyoQian" }]
+keywords = ["nonebot", "nonebot2", "mihoyo", "mihoyobbs", "genshin", "checkin", "bot", "qq", "onebot"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Robot Framework",
+    "Framework :: Robot Framework :: Library",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Chat",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "httpx>=0.24,<1",
+    "PyYAML>=6.0",
+    "qrcode>=7.4",
+    "loguru>=0.7",
+    "pyfiglet>=1.0",
+    "Pillow>=9.0",
+    "nonebot2>=2.0,<3.0",
+    "nonebot-adapter-onebot>=2.2,<3.0",
+    "nonebot-plugin-apscheduler>=0.3,<1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/marchen-orz/MiyoQian"
+Repository = "https://github.com/marchen-orz/MiyoQian"
+Issues = "https://github.com/marchen-orz/MiyoQian/issues"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["nonebot_plugin_miyouqian", "miyouqian", "miyouqian.auth", "miyouqian.core", "miyouqian.service", "miyouqian.tasks"]
+
+[tool.setuptools.package-data]
+nonebot_plugin_miyouqian = []
+miyouqian = ["templates/*"]
+
+[tool.nonebot]
+plugins = ["nonebot_plugin_miyouqian"]

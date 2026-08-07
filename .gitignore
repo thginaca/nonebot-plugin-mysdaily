@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# 米游签运行时产物
+config.yaml
+qrcode.png
+*.log
+data/
+logs/
+tests/*
+
+# NoneBot
+.env
+.env.*
+!.env.example
+nonebot_plugin_miyouqian/config.yaml
+nonebot_plugin_miyouqian/data/
+nonebot_plugin_miyouqian/logs/
+
+# uv / pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 类型检查
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Jupyter
+.ipynb_checkpoints
+
+# 类型存根（如果发布时不带）
+*.pyi
