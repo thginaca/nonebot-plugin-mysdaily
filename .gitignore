@@ -60,9 +60,9 @@ tests/*
 .env
 .env.*
 !.env.example
-nonebot_plugin_miyouqian/config.yaml
-nonebot_plugin_miyouqian/data/
-nonebot_plugin_miyouqian/logs/
+nonebot_plugin_mysdaily/config.yaml
+nonebot_plugin_mysdaily/data/
+nonebot_plugin_mysdaily/logs/
 
 # uv / pip
 pip-log.txt

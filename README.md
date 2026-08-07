@@ -88,7 +88,7 @@ copy .env.example .env
 SUPERUSERS=["你的QQ号"]
 
 # 加载插件
-PLUGINS=["nonebot_plugin_miyouqian"]
+PLUGINS=["nonebot_plugin_mysdaily"]
 ```
 
 如果你使用 OneBot V11 适配器（go-cqhttp / Lagrange / NapCat 等），还需要在 `.env` 或 `nonebot` 配置中正确设置连接方式。
@@ -99,7 +99,7 @@ PLUGINS=["nonebot_plugin_miyouqian"]
 python bot.py
 ```
 
-启动成功后，NoneBot 会自动加载插件。首次运行时，插件会从 `config.example.yaml` 复制一份到 `nonebot_plugin_miyouqian/config.yaml` 作为初始配置。
+启动成功后，NoneBot 会自动加载插件。首次运行时，插件会从 `config.example.yaml` 复制一份到 `nonebot_plugin_mysdaily/config.yaml` 作为初始配置。
 
 ### 5. 在 QQ 中登录账号
 
@@ -131,7 +131,7 @@ python bot.py
 
 ### 7. 开启每日自动签到
 
-编辑 `nonebot_plugin_miyouqian/config.yaml`：
+编辑 `nonebot_plugin_mysdaily/config.yaml`：
 
 ```yaml
 schedule:
@@ -481,7 +481,7 @@ captcha:
 ## 配置文件结构
 
 ```
-nonebot_plugin_miyouqian/
+nonebot_plugin_mysdaily/
 ├── config.yaml              # 账号、任务开关、调度、推送等配置
 ├── data/
 │   └── credentials.yaml    # 登录凭证（敏感，勿提交仓库）
@@ -528,7 +528,7 @@ schedule:
 
 ### 扫码登录后凭证保存在哪里？
 
-默认保存在 `nonebot_plugin_miyouqian/data/credentials.yaml`。普通设置保存在 `config.yaml`。
+默认保存在 `nonebot_plugin_mysdaily/data/credentials.yaml`。普通设置保存在 `config.yaml`。
 
 ### 为什么 `config.yaml` 里看不到 cookie？
 
