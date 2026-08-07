@@ -87,7 +87,7 @@ def get_plugin_config() -> Config:
         except Exception:
             pass
 
-    # 2) 兜底：从 driver.config 拿全局配置并过滤 MYSDILY_ 前缀
+    # 2) 兜底：从 driver.config 拿全局配置并过滤 MYSDAILY_ 前缀
     driver = get_driver()
     if hasattr(driver.config, "dict"):
         try:

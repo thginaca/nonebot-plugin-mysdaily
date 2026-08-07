@@ -3,7 +3,7 @@
 
 权限：任何人可触发所有指令。
 
-指令结构（前缀默认 `myq`，可通过 .env 的 MYSDILY_COMMAND 修改）：
+指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
     /myq run [账号名]           立即执行签到（可选指定账号）
     /myq run --games           仅执行游戏社区/云游戏签到

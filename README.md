@@ -199,13 +199,13 @@ schedule:
 
 | 环境变量 | 说明 |
 | --- | --- |
-| `MYSDILY_COMMAND` | 指令前缀，默认 `myq` |
-| `MYSDILY_CONFIG_PATH` | `config.yaml` 路径，留空使用插件目录 |
-| `MYSDILY_SCHEDULE_ENABLE` | 是否启用定时签到（true/false） |
-| `MYSDILY_SCHEDULE_TIME` | 每日执行时间，如 `09:00` |
-| `MYSDILY_SCHEDULE_JITTER` | 随机波动分钟数 |
-| `MYSDILY_REPLY_ON_RUN` | 手动执行后是否回发结果，默认 true |
-| `MYSDILY_LOGIN_TIMEOUT` | 扫码登录超时秒数，默认 120 |
+| `MYSDAILY_COMMAND` | 指令前缀，默认 `myq` |
+| `MYSDAILY_CONFIG_PATH` | `config.yaml` 路径，留空使用插件目录 |
+| `MYSDAILY_SCHEDULE_ENABLE` | 是否启用定时签到（true/false） |
+| `MYSDAILY_SCHEDULE_TIME` | 每日执行时间，如 `09:00` |
+| `MYSDAILY_SCHEDULE_JITTER` | 随机波动分钟数 |
+| `MYSDAILY_REPLY_ON_RUN` | 手动执行后是否回发结果，默认 true |
+| `MYSDAILY_LOGIN_TIMEOUT` | 扫码登录超时秒数，默认 120 |
 
 ---
 
@@ -380,9 +380,9 @@ schedule:
 通过 `.env` 覆盖（优先级更高）：
 
 ```env
-MYSDILY_SCHEDULE_ENABLE=true
-MYSDILY_SCHEDULE_TIME=00:00
-MYSDILY_SCHEDULE_JITTER=30
+MYSDAILY_SCHEDULE_ENABLE=true
+MYSDAILY_SCHEDULE_TIME=00:00
+MYSDAILY_SCHEDULE_JITTER=30
 ```
 
 修改后发送 `/myq reload` 即可重载配置。
@@ -516,7 +516,7 @@ nonebot_plugin_mysdaily/
 - `config.yaml` 首次启动时自动从 `config.example.yaml` 复制生成
 - `data/credentials.yaml` 存储登录凭证和云游戏 Token
 - `logs/mysdaily.log` 记录每次签到的详细输出
-- `.env` 中的 `MYSDILY_CONFIG_PATH` 可以指定配置文件位置
+- `.env` 中的 `MYSDAILY_CONFIG_PATH` 可以指定配置文件位置
 
 ## 常用设置
 

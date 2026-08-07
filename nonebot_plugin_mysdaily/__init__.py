@@ -26,7 +26,7 @@ __plugin_meta__ = PluginMetadata(
     name="MysDaily",
     description="米游社签到、云游戏签到、米游币任务、商品兑换（NoneBot2 插件）",
     usage=(
-        "指令前缀默认 myq（可通过 .env 的 MYSDILY_COMMAND 修改）：\n"
+        "指令前缀默认 myq（可通过 .env 的 MYSDAILY_COMMAND 修改）：\n"
         "  /myq run [账号名] [--games|--bbs] [--game genshin]\n"
         "  /myq status\n"
         "  /myq login [账号名]\n"
