@@ -39,7 +39,7 @@ def resolve_schedule(config_yaml: dict, plugin_config: Config) -> tuple[bool, st
     )
     time_str = (
         plugin_config.miyouqian_schedule_time.strip()
-        or str(sched.get("time", "09:00"))
+        or str(sched.get("time", "00:00"))
     )
     jitter = (
         plugin_config.miyouqian_schedule_jitter
