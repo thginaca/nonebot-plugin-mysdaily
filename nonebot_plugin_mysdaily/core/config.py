@@ -426,7 +426,7 @@ def upsert_account(config: dict[str, Any], name: str, data: dict[str, Any]) -> d
     new_name = name.strip()
     new_qq = str(data.get("qq_user_id") or "").strip()
 
-    # 1. 优先按 UID 查找（同一米游社账号跨名字/QQ 合并）
+    # 1. 优先按 UID 查找（同一米游社账号跨名字合并，更新名字/QQ/凭证）
     if new_uid:
         for account in accounts:
             if str(account.get("stuid") or "").strip() == new_uid:
@@ -436,10 +436,19 @@ def upsert_account(config: dict[str, Any], name: str, data: dict[str, Any]) -> d
                 account.update(data)
                 return account
 
-    # 2. 按 (qq_user_id, name) 联合查找（同一 QQ 下同名子账号更新）
+    # 2. 按 (qq_user_id, name) 联合查找
+    #    注意：若同名子账号已有不同 UID，说明用户用同名绑了不同米游社账号，
+    #    此时不应覆盖原 UID（会导致原账号数据丢失），而是拒绝并让用户换名字。
     if new_qq:
         for account in accounts:
             if str(account.get("qq_user_id") or "").strip() == new_qq and account.get("name") == new_name:
+                existing_uid = str(account.get("stuid") or "").strip()
+                if new_uid and existing_uid and existing_uid != new_uid:
+                    raise ValueError(
+                        f"子账号名「{new_name}」已绑定 UID={existing_uid}，"
+                        f"与扫码登录的 UID={new_uid} 不一致。"
+                        f"请换一个子账号名（例如 /myq login {new_name}2），或先 delete 该账号。"
+                    )
                 account.update(data)
                 return account
 

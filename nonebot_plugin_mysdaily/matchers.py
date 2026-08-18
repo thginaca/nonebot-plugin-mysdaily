@@ -365,18 +365,22 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
 
     # 重新加载最新配置并写入凭证
     config = runtime.load_config()
-    old_count = len(config.get("accounts", []))
     # 绑定 QQ 号，便于区分不同用户
     account_data["qq_user_id"] = qq_user_id
-    upsert_account(config, account_name, account_data)
+    try:
+        upsert_account(config, account_name, account_data)
+    except ValueError as exc:
+        await bot.send(event, f"❌ 绑定失败: {exc}")
+        return
     save_config(runtime.config_path, config)
-    new_count = len(config.get("accounts", []))
+    # 统计该用户自己的账号数（非全局总数）
+    my_count = sum(
+        1 for a in config.get("accounts", [])
+        if str(a.get("qq_user_id") or "") == qq_user_id
+    )
     uid = account_data.get("stuid", "")
     msg = f"✅ 账号「{account_name}」登录成功 (UID: {uid})"
-    if new_count > old_count:
-        msg += f"，你当前共绑定 {new_count} 个账号"
-    else:
-        msg += "，已更新凭证"
+    msg += f"，你当前共绑定 {my_count} 个账号"
     await bot.send(event, msg)
 
 
