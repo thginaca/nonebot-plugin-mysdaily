@@ -33,7 +33,7 @@ __plugin_meta__ = PluginMetadata(
         "  /myq delete [序号|子账号名] 删除我绑定的账号\n"
         "  /myq toggle game|cloud|bbs on|off\n"
         "  /myq reload             重载配置与定时任务\n"
-        "Bot 主专用：/myq runall /myq statusall"
+        "Bot 主专用：/myq runall /myq statusall [QQ号] /myq deleteall <序号|QQ号|UID>"
     ),
     type="application",
     homepage="https://github.com/thginaca/nonebot-plugin-mysdaily",

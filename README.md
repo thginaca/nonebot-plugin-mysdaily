@@ -199,11 +199,12 @@ schedule:
 | `/myq toggle bbs on` | 开关米游币任务 |
 | `/myq reload` | 重载配置并重新注册定时任务 |
 | `/myq runall` | [Bot 主] 一键执行全体签到 |
-| `/myq statusall` | [Bot 主] 查看所有人账号状态 |
+| `/myq statusall [QQ号]` | [Bot 主] 查看所有人/指定QQ账号状态 |
+| `/myq deleteall <序号\|QQ号\|UID>` | [Bot 主] 删除任意账号（按 statusall 序号） |
 
 ### 权限
 
-所有指令对任何人开放，无需特殊权限。`runall` / `statusall` 仅限 Bot 超级用户。
+所有指令对任何人开放，无需特殊权限。`runall` / `statusall` / `deleteall` 仅限 Bot 超级用户。
 
 ### 环境变量覆盖
 

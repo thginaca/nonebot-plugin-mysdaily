@@ -17,7 +17,8 @@
     /myq toggle game|cloud|bbs on|off
     /myq reload                重载配置与定时任务
     /myq runall                [Bot主] 一键执行全体签到
-    /myq statusall             [Bot主] 查看所有人账号状态
+    /myq statusall [QQ号]      [Bot主] 查看所有人/指定QQ账号状态
+    /myq deleteall <序号|QQ号|UID> [Bot主] 删除任意账号（按 statusall 序号或直接指定）
 """
 
 from __future__ import annotations
@@ -77,7 +78,8 @@ def _help_text(command: str) -> str:
         f"  {command} toggle game|cloud|bbs on|off\n"
         f"  {command} reload                重载配置与定时任务\n"
         f"  {command} runall                [Bot主] 一键执行全体签到\n"
-        f"  {command} statusall             [Bot主] 查看所有人账号状态\n"
+        f"  {command} statusall [QQ号]      [Bot主] 查看所有人/指定QQ账号状态\n"
+        f"  {command} deleteall <序号|QQ号|UID> [Bot主] 删除任意账号\n"
     )
 
 
@@ -184,8 +186,8 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
     await bot.send(event, "\n".join(lines))
 
 
-async def _handle_statusall(bot: Bot, event: MessageEvent) -> None:
-    """Bot 主专用：查看所有人账号状态。"""
+async def _handle_statusall(bot: Bot, event: MessageEvent, args: list[str]) -> None:
+    """Bot 主专用：查看所有人账号状态，可按 QQ 号筛选。"""
     runtime = get_runtime()
     config = runtime.load_config()
     accounts = config.get("accounts", [])
@@ -193,8 +195,18 @@ async def _handle_statusall(bot: Bot, event: MessageEvent) -> None:
         await bot.send(event, "当前没有任何账号")
         return
 
-    # 按 QQ 号分组显示
-    lines = [f"【全体账号】共 {len(accounts)} 个"]
+    # 可选按 QQ 号筛选
+    filter_qq = args[0] if args else None
+    if filter_qq:
+        accounts = [a for a in accounts if str(a.get("qq_user_id") or "") == filter_qq]
+        if not accounts:
+            await bot.send(event, f"QQ {filter_qq} 没有绑定账号")
+            return
+        header = f"【QQ {filter_qq} 的账号】共 {len(accounts)} 个"
+    else:
+        header = f"【全体账号】共 {len(accounts)} 个"
+
+    lines = [header]
     for idx, acc in enumerate(accounts, 1):
         name = acc.get("name", "main")
         uid = acc.get("stuid", "")
@@ -206,6 +218,70 @@ async def _handle_statusall(bot: Bot, event: MessageEvent) -> None:
     if runtime.running:
         lines.append("\n⏳ 当前有任务正在执行")
     await bot.send(event, "\n".join(lines))
+
+
+async def _handle_deleteall(bot: Bot, event: MessageEvent, args: list[str]) -> None:
+    """Bot 主专用：删除任意账号（按全局序号 / QQ号 / UID / 子账号名）。"""
+    if not args:
+        await bot.send(event, "用法: deleteall <序号|QQ号|UID|子账号名>\n先用 statusall 查看全局序号")
+        return
+    runtime = get_runtime()
+    config = runtime.load_config()
+    accounts = config.get("accounts", [])
+    if not accounts:
+        await bot.send(event, "当前没有任何账号")
+        return
+    key = args[0].strip()
+    target = None
+    # 1. 全局序号（statusall 显示的序号）
+    if key.isdigit():
+        idx = int(key)
+        if 1 <= idx <= len(accounts):
+            target = accounts[idx - 1]
+    # 2. UID
+    if target is None:
+        for acc in accounts:
+            if str(acc.get("stuid") or "") == key:
+                target = acc
+                break
+    # 3. QQ 号（删除该 QQ 的第一个账号，提示用序号精确删）
+    if target is None:
+        matched = [a for a in accounts if str(a.get("qq_user_id") or "") == key]
+        if len(matched) == 1:
+            target = matched[0]
+        elif len(matched) > 1:
+            qq_idx_start = accounts.index(matched[0]) + 1
+            names = [m.get("name", "") for m in matched]
+            await bot.send(
+                event,
+                f"QQ {key} 绑定了多个账号: {', '.join(names)}\n"
+                f"请用全局序号精确删除（statusall 中第 {qq_idx_start}~{qq_idx_start + len(matched) - 1} 个）",
+            )
+            return
+    # 4. 子账号名（全局唯一时直接删，多个同名时提示用序号）
+    if target is None:
+        matched = [a for a in accounts if a.get("name") == key]
+        if len(matched) == 1:
+            target = matched[0]
+        elif len(matched) > 1:
+            idxs = [accounts.index(m) + 1 for m in matched]
+            qqs = [str(m.get("qq_user_id") or "") for m in matched]
+            await bot.send(
+                event,
+                f"存在 {len(matched)} 个名为「{key}」的账号（分属 QQ: {', '.join(qqs)}）\n"
+                f"请用全局序号精确删除: {idxs}",
+            )
+            return
+    if target is None:
+        await bot.send(event, f"未找到账号: {key}")
+        return
+
+    name = target.get("name", "")
+    uid = target.get("stuid", "")
+    qq = target.get("qq_user_id", "")
+    delete_account(config, target)
+    save_config(runtime.config_path, config)
+    await bot.send(event, f"✅ 已删除账号「{name}」(UID: {uid}, QQ: {qq})")
 
 
 async def _handle_runall(bot: Bot, event: MessageEvent) -> None:
@@ -444,7 +520,12 @@ def register_matchers(command: str) -> None:
             if not await SUPERUSER(bot, event):
                 await bot.send(event, "⚠️ 该指令仅限 Bot 主人使用")
                 return
-            await _handle_statusall(bot, event)
+            await _handle_statusall(bot, event, rest)
+        elif sub in ("deleteall", "全体删除"):
+            if not await SUPERUSER(bot, event):
+                await bot.send(event, "⚠️ 该指令仅限 Bot 主人使用")
+                return
+            await _handle_deleteall(bot, event, rest)
         elif sub in ("login", "登录", "扫码"):
             await _handle_login(bot, event, rest)
         elif sub in ("delete", "删除", "del"):
