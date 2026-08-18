@@ -6,7 +6,7 @@ from __future__ import annotations
 import copy
 import pathlib
 import random
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 
@@ -503,6 +503,8 @@ def save_credentials(path: pathlib.Path, config: dict[str, Any]) -> None:
         "accounts": [
             {
                 "name": str(account.get("name") or ""),
+                "qq_user_id": str(account.get("qq_user_id") or ""),
+                "stuid": str(account.get("stuid") or ""),
                 **{field: str(account.get(field) or "") for field in SENSITIVE_ACCOUNT_FIELDS},
                 "cloud_games": {
                     "tokens": normalize_cloud_game_tokens(
@@ -522,7 +524,10 @@ def save_credentials(path: pathlib.Path, config: dict[str, Any]) -> None:
 def merge_credentials(config: dict[str, Any], credentials: dict[str, Any]) -> None:
     if not config.get("accounts") and credentials.get("accounts"):
         config["accounts"] = [
-            {"name": str(account.get("name") or "")}
+            {
+                "name": str(account.get("name") or ""),
+                "qq_user_id": str(account.get("qq_user_id") or ""),
+            }
             for account in credentials.get("accounts", [])
             if isinstance(account, dict)
         ]
@@ -531,20 +536,44 @@ def merge_credentials(config: dict[str, Any], credentials: dict[str, Any]) -> No
         for account in credentials.get("accounts", [])
         if isinstance(account, dict)
     ]
-    credential_accounts = {
-        str(account.get("name")): account
-        for account in credential_list
-        if account.get("name")
-    }
-    for index, account in enumerate(config.get("accounts", [])):
-        saved = credential_accounts.get(str(account.get("name")))
-        if saved is None and index < len(credential_list):
-            saved = credential_list[index]
+    # 多用户场景：不同 QQ 可有同名子账号（如各有一个 main），
+    # 因此 key 必须用 (qq_user_id, name) 而非仅 name，
+    # UID 作为全局唯一主键用于跨配置匹配。
+    credential_by_uid: dict[str, dict[str, Any]] = {}
+    credential_by_qq_name: dict[tuple[str, str], dict[str, Any]] = {}
+    credential_by_name: dict[str, dict[str, Any]] = {}
+    for account in credential_list:
+        uid = str(account.get("stuid") or "")
+        qq = str(account.get("qq_user_id") or "")
+        name = str(account.get("name") or "")
+        if uid:
+            credential_by_uid.setdefault(uid, account)
+        if qq and name:
+            credential_by_qq_name.setdefault((qq, name), account)
+        if name:
+            credential_by_name.setdefault(name, account)
+
+    for account in config.get("accounts", []):
+        uid = str(account.get("stuid") or "")
+        qq = str(account.get("qq_user_id") or "")
+        name = str(account.get("name") or "")
+        saved: Optional[dict[str, Any]] = None
+        # 1. UID 全局唯一，优先匹配
+        if uid:
+            saved = credential_by_uid.get(uid)
+        # 2. (qq, name) 联合匹配
+        if saved is None and qq and name:
+            saved = credential_by_qq_name.get((qq, name))
+        # 3. 仅 name 匹配（兼容旧凭证文件，单用户场景）
+        if saved is None and name:
+            saved = credential_by_name.get(name)
         for field in SENSITIVE_ACCOUNT_FIELDS:
             if saved and not account.get(field):
                 account[field] = str(saved.get(field) or "")
             else:
                 account.setdefault(field, "")
+        if saved:
+            account["qq_user_id"] = qq or str(saved.get("qq_user_id") or "")
         merge_account_cloud_game_credentials(account, saved)
 
 
