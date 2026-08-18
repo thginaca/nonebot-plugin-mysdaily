@@ -56,11 +56,14 @@ class MysdailyRuntime:
         bbs_only: bool = False,
         only_games: Optional[list[str]] = None,
         reply: bool = True,
+        qq_user_id: Optional[str] = None,
     ) -> list[str]:
         """执行签到任务并推送结果。
 
         :param bot: OneBot Bot 实例，用于回发结果；定时任务可传 None
         :param reply_event: 触发会话，若 reply=True 且非空则回发该会话
+        :param account: 指定账号（UID 或子账号名），None 时按 qq_user_id 筛选
+        :param qq_user_id: 发送者 QQ 号，account 为 None 时只执行该用户账号
         :param reply: 是否回发触发会话
         """
         if self.running:
@@ -95,6 +98,7 @@ class MysdailyRuntime:
                 bbs_only,
                 only_games,
                 emit_component=emit_component,
+                qq_user_id=qq_user_id,
             )
 
         try:

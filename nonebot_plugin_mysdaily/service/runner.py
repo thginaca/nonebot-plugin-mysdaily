@@ -24,6 +24,7 @@ def run_tasks(
     only_games: list[str] | None = None,
     emit: EmitFn | None = None,
     emit_component: ComponentEmitFn | None = None,
+    qq_user_id: str | None = None,
 ) -> list[str]:
     output: list[str] = []
 
@@ -39,7 +40,16 @@ def run_tasks(
     if not config.get("enable", True):
         add("配置 enable=false，已跳过。")
         return output
-    accounts = [find_account(config, account_name)] if account_name else list(config.get("accounts", []))
+    if account_name:
+        accounts = [find_account(config, account_name)]
+    elif qq_user_id:
+        # 按发送者 QQ 号筛选账号（只执行该用户绑定的账号）
+        accounts = [
+            a for a in config.get("accounts", [])
+            if str(a.get("qq_user_id") or "") == str(qq_user_id)
+        ]
+    else:
+        accounts = list(config.get("accounts", []))
     if not accounts:
         add("没有配置账号，已跳过。")
         return output

@@ -114,9 +114,8 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
         return
 
     # 自动按发送者 QQ 号筛选账号
-    # account_key=None → 执行该用户所有账号
-    # account_key="2" 或 "alt" → 仅执行指定账号
-    # 传 UID（全局唯一）给 runner，避免不同用户同名子账号串号
+    # account_key=None → 执行该用户所有账号（传 qq_user_id 给 runner 筛选）
+    # account_key="2" 或 "alt" → 仅执行指定账号（传 UID 防止同名串号）
     account = None
     config = runtime.load_config()
     user_accounts = [a for a in config.get("accounts", []) if str(a.get("qq_user_id") or "") == qq_user_id]
@@ -129,9 +128,8 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
         except ValueError as exc:
             await bot.send(event, str(exc))
             return
+        # 传 UID（全局唯一）给 runner，避免不同用户同名子账号串号
         account = acc.get("stuid") or acc.get("name")
-    elif len(user_accounts) == 1:
-        account = user_accounts[0].get("stuid") or user_accounts[0].get("name")
 
     await bot.send(event, "⏳ 开始执行签到任务，请稍候…")
     await runtime.run_and_notify(
@@ -142,6 +140,7 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
         bbs_only=bbs_only,
         only_games=only_games or None,
         reply=True,
+        qq_user_id=qq_user_id,
     )
 
 
