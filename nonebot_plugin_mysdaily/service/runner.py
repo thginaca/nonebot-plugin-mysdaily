@@ -56,7 +56,10 @@ def run_tasks(
     should_emit = bool(emit or emit_component)
     with ApiClient() as client:
         for index, account in enumerate(accounts, start=1):
-            add(f"# 账号 {index}/{len(accounts)}: {account.get('name', '未命名')}")
+            qq = str(account.get("qq_user_id") or "")
+            sub = str(account.get("name") or "未命名")
+            head = f"# 账号 {index}/{len(accounts)}: {qq}/{sub}" if qq else f"# 账号 {index}/{len(accounts)}: {sub}"
+            add(head)
             if not bbs_only and config.get("features", {}).get("game_checkin", True):
                 lines = GameCheckin(
                     client,
