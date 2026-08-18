@@ -13,7 +13,7 @@ from nonebot.log import logger
 from nonebot_plugin_apscheduler import scheduler
 
 from .config import Config
-from .runner import MiyoQianRuntime
+from .runner import MysdailyRuntime
 
 JOB_ID = "mysdaily_checkin"
 
@@ -49,9 +49,9 @@ def resolve_schedule(config_yaml: dict, plugin_config: Config) -> tuple[bool, st
     return enable, time_str, max(jitter, 0)
 
 
-async def _daily_job(runtime: MiyoQianRuntime) -> None:
+async def _daily_job(runtime: MysdailyRuntime) -> None:
     """定时任务实际执行函数：不回发会话，只走配置的推送渠道。"""
-    logger.info("MiyoQian 定时任务触发，开始执行")
+    logger.info("mysdaily 定时任务触发，开始执行")
     await runtime.run_and_notify(
         bot=None,
         reply_event=None,
@@ -59,7 +59,7 @@ async def _daily_job(runtime: MiyoQianRuntime) -> None:
     )
 
 
-def setup_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:
+def setup_daily_job(runtime: MysdailyRuntime, plugin_config: Config) -> None:
     """根据当前配置注册/更新每日签到任务。"""
     config_yaml = runtime.load_config()
     enable, time_str, jitter_minutes = resolve_schedule(config_yaml, plugin_config)
@@ -69,13 +69,13 @@ def setup_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:
         scheduler.remove_job(JOB_ID)
 
     if not enable:
-        logger.info("MiyoQian 每日调度已禁用，不注册定时任务")
+        logger.info("mysdaily 每日调度已禁用，不注册定时任务")
         return
 
     try:
         hour, minute = _parse_time(time_str)
     except ValueError as exc:
-        logger.error(f"MiyoQian 调度时间配置无效: {exc}")
+        logger.error(f"mysdaily 调度时间配置无效: {exc}")
         return
 
     # APScheduler 的 jitter 单位是秒，在触发时间基础上随机偏移
@@ -93,9 +93,9 @@ def setup_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:
         coalesce=True,
     )
     jitter_desc = f"，随机波动 ±{jitter_minutes} 分钟" if jitter_minutes > 0 else ""
-    logger.info(f"MiyoQian 定时任务已注册：每日 {time_str}{jitter_desc}")
+    logger.info(f"mysdaily 定时任务已注册：每日 {time_str}{jitter_desc}")
 
 
-def reload_daily_job(runtime: MiyoQianRuntime, plugin_config: Config) -> None:
+def reload_daily_job(runtime: MysdailyRuntime, plugin_config: Config) -> None:
     """配置变更后重新注册任务。"""
     setup_daily_job(runtime, plugin_config)

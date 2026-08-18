@@ -20,15 +20,15 @@ except Exception:
 
 
 class Config(BaseModel):
-    """MiyoQian 插件配置。"""
+    """mysdaily 插件配置。"""
 
     mysdaily_config_path: str = Field(
         default="",
-        description="MiyoQian config.yaml 路径，留空则使用插件目录",
+        description="mysdaily config.yaml 路径，留空则使用插件目录",
     )
     mysdaily_command: str = Field(
         default="myq",
-        description="MiyoQian 指令前缀，例如 myq -> /myq run",
+        description="mysdaily 指令前缀，例如 myq -> /myq run",
     )
     mysdaily_schedule_enable: Optional[bool] = Field(
         default=None,
@@ -119,7 +119,7 @@ def get_plugin_config() -> Config:
 
 
 def resolve_config_path(plugin_config: Config) -> "pathlib.Path":
-    """返回 MiyoQian config.yaml 的实际路径，必要时复制示例配置。"""
+    """返回 mysdaily config.yaml 的实际路径，必要时复制示例配置。"""
     import pathlib
     import shutil
 

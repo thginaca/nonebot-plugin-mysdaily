@@ -19,20 +19,21 @@ require("nonebot_plugin_apscheduler")
 
 from .config import Config, get_plugin_config, resolve_config_path
 from .matchers import register_matchers
-from .runner import MiyoQianRuntime, set_runtime
+from .runner import MysdailyRuntime, set_runtime
 from .scheduler import setup_daily_job
 
 __plugin_meta__ = PluginMetadata(
     name="MysDaily",
     description="米游社签到、云游戏签到、米游币任务、商品兑换（NoneBot2 插件）",
     usage=(
-        "指令前缀默认 myq（可通过 .env 的 MYSDAILY_COMMAND 修改）：\n"
-        "  /myq run [账号名] [--games|--bbs] [--game genshin]\n"
-        "  /myq status\n"
-        "  /myq login [账号名]\n"
+        "指令前缀默认 myq（可通过 .env 的 MYSDAILY_COMMAND 修改），任何人可用：\n"
+        "  /myq login [子账号名]   扫码登录绑定米游社（默认 main，可绑多个）\n"
+        "  /myq status             查看我的账号状态（带序号）\n"
+        "  /myq run [序号|子账号名] 执行我的签到（不填则全部）\n"
+        "  /myq delete [序号|子账号名] 删除我绑定的账号\n"
         "  /myq toggle game|cloud|bbs on|off\n"
-        "  /myq reload\n"
-        "权限：超级用户 + 群管理员/群主"
+        "  /myq reload             重载配置与定时任务\n"
+        "Bot 主专用：/myq runall /myq statusall"
     ),
     type="application",
     homepage="https://github.com/thginaca/nonebot-plugin-mysdaily",
@@ -48,7 +49,7 @@ plugin_config: Config = Config()
 # 提前用默认值注册；on_startup 后 matcher 不重注册，因为仅需 command 前缀
 register_matchers(plugin_config.mysdaily_command)
 
-_runtime: Optional[MiyoQianRuntime] = None
+_runtime: Optional[MysdailyRuntime] = None
 
 driver = get_driver()
 
@@ -72,7 +73,7 @@ async def _on_startup() -> None:
             pass
 
     config_path = resolve_config_path(plugin_config)
-    runtime = MiyoQianRuntime(config_path)
+    runtime = MysdailyRuntime(config_path)
     set_runtime(runtime)
     logger.info(f"MysDaily 配置文件: {config_path}")
     setup_daily_job(runtime, plugin_config)

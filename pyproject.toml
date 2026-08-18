@@ -1,11 +1,11 @@
 [project]
 name = "nonebot-plugin-mysdaily"
 version = "0.1.0"
-description = "MiyoQian NoneBot2 插件：米游社签到、云游戏签到、米游币任务、商品兑换"
+description = "NoneBot2 插件：米游社签到、云游戏签到、米游币任务、商品兑换"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "MiyoQian" }]
+authors = [{ name = "thginaca" }]
 keywords = ["nonebot", "nonebot2", "mihoyo", "mihoyobbs", "genshin", "checkin", "bot", "qq", "onebot"]
 classifiers = [
     "Development Status :: 4 - Beta",

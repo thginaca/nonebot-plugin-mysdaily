@@ -23,8 +23,8 @@ DEFAULT_CONSOLE_LOGO = r"""
         | |  | | | |_| | (_) |   | |_| | | (_| | | | |
         |_|  |_|_|\__, |\___/     \__\_\_|\__,_|_| |_|
                   |___/
-                    MiyoQian / MySDaily
-                    
+                    MySDaily
+
 """.strip("\n")
 
 

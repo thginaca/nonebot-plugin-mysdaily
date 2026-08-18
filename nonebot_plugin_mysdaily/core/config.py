@@ -135,29 +135,33 @@ def normalize_config(config: dict[str, Any]) -> None:
     accounts = config.setdefault("accounts", [])
     if isinstance(accounts, dict):
         config["accounts"] = [accounts]
-    # 清理重复账号：按名字和 UID 去重
-    seen_names: dict[str, dict[str, Any]] = {}
+    # 清理重复账号：按 UID 去重（同一米游社账号只保留一份）；
+    # 不同 QQ 可拥有同名子账号，因此不再按 name 全局去重。
     seen_uids: dict[str, dict[str, Any]] = {}
     deduped: list[dict[str, Any]] = []
     for account in config["accounts"]:
+        # 旧格式迁移：qq_{数字} / qq_{数字}_{后缀} → 纯子账号名 + qq_user_id
         name = str(account.get("name") or "").strip()
+        qq = str(account.get("qq_user_id") or "").strip()
+        if not qq and name.startswith("qq_"):
+            rest = name[3:]
+            if "_" in rest:
+                qq_part, suffix = rest.split("_", 1)
+                if qq_part.isdigit():
+                    account["qq_user_id"] = qq_part
+                    account["name"] = suffix
+            elif rest.isdigit():
+                account["qq_user_id"] = rest
+                account["name"] = "main"
+        account["name"] = (str(account.get("name") or "").strip() or "main")[:20]
         uid = str(account.get("stuid") or "").strip()
-        account["name"] = name[:10]
-        # 如果 UID 已存在，合并到已有账号
+        # 按 UID 去重
         if uid and uid in seen_uids:
-            existing = seen_uids[uid]
-            existing.update(account)
-            continue
-        # 如果名字已存在（且 UID 不同），合并到已有账号
-        if name and name in seen_names:
-            existing = seen_names[name]
-            existing.update(account)
+            seen_uids[uid].update(account)
             continue
         for field in SENSITIVE_ACCOUNT_FIELDS:
             account.setdefault(field, "")
         deduped.append(account)
-        if name:
-            seen_names[name] = account
         if uid:
             seen_uids[uid] = account
     config["accounts"] = deduped
@@ -400,26 +404,18 @@ def find_account(config: dict[str, Any], name: str | None = None) -> dict[str, A
         raise ValueError("配置中没有账号")
     if name is None:
         return accounts[0]
-    # 精确匹配完整名字
+    key = name.strip()
+    # 按 UID 精确匹配（UID 全局唯一，runner 优先走此分支）
     for account in accounts:
-        if account.get("name") == name:
+        if str(account.get("stuid") or "").strip() == key:
             return account
-    # 按 UID 匹配
+    # 按子账号名精确匹配
     for account in accounts:
-        if str(account.get("stuid") or "").strip() == name.strip():
+        if account.get("name") == key:
             return account
-    # 按 QQ 号匹配（匹配所有该 QQ 号的账号中的第一个）
+    # 按 QQ 号匹配（匹配该 QQ 号绑定的第一个账号）
     for account in accounts:
-        if str(account.get("qq_user_id") or "").strip() == name.strip():
-            return account
-    # QQ 号作为名字使用（如 "123456789" 匹配 "qq_123456789"）
-    for account in accounts:
-        if account.get("name") == f"qq_{name}":
-            return account
-    # 多账号后缀匹配（如 "alt" 匹配 "qq_123456789_alt"）
-    for account in accounts:
-        account_name = account.get("name", "")
-        if account_name.startswith("qq_") and account_name.endswith(f"_{name}"):
+        if str(account.get("qq_user_id") or "").strip() == key:
             return account
     raise ValueError(f"未找到账号: {name}")
 
@@ -428,26 +424,65 @@ def upsert_account(config: dict[str, Any], name: str, data: dict[str, Any]) -> d
     accounts = config.setdefault("accounts", [])
     new_uid = str(data.get("stuid") or "").strip()
     new_name = name.strip()
+    new_qq = str(data.get("qq_user_id") or "").strip()
 
-    # 优先按 UID 查找（跨名字合并，防止重复）
+    # 1. 优先按 UID 查找（同一米游社账号跨名字/QQ 合并）
     if new_uid:
         for account in accounts:
             if str(account.get("stuid") or "").strip() == new_uid:
-                if account.get("name") != new_name:
-                    account["name"] = new_name
+                account["name"] = new_name
+                if new_qq:
+                    account["qq_user_id"] = new_qq
                 account.update(data)
                 return account
 
-    # 再按名字查找（更新已有账号）
-    for account in accounts:
-        if str(account.get("name") or "").strip() == new_name:
-            account.update(data)
-            return account
+    # 2. 按 (qq_user_id, name) 联合查找（同一 QQ 下同名子账号更新）
+    if new_qq:
+        for account in accounts:
+            if str(account.get("qq_user_id") or "").strip() == new_qq and account.get("name") == new_name:
+                account.update(data)
+                return account
 
-    # 都没找到，追加新账号
+    # 3. 都没找到，追加新账号
     account = {"name": new_name, **data}
     accounts.append(account)
     return account
+
+
+def find_user_account(config: dict[str, Any], qq_user_id: str, key: str) -> dict[str, Any]:
+    """在指定 QQ 号绑定的账号中，按序号 / 子账号名 / UID 查找账号。"""
+    user_accounts = [
+        a for a in config.get("accounts", [])
+        if str(a.get("qq_user_id") or "") == str(qq_user_id)
+    ]
+    if not user_accounts:
+        raise ValueError("你还没有绑定账号，请先使用 login 扫码登录")
+    key = str(key).strip()
+    # 序号（从 1 开始）
+    if key.isdigit():
+        idx = int(key)
+        if 1 <= idx <= len(user_accounts):
+            return user_accounts[idx - 1]
+        raise ValueError(f"序号超出范围，你共绑定 {len(user_accounts)} 个账号")
+    # 子账号名精确匹配
+    for acc in user_accounts:
+        if acc.get("name") == key:
+            return acc
+    # UID 匹配
+    for acc in user_accounts:
+        if str(acc.get("stuid") or "") == key:
+            return acc
+    raise ValueError(f"未找到账号: {key}")
+
+
+def delete_account(config: dict[str, Any], account: dict[str, Any]) -> bool:
+    """从配置中移除指定账号对象。"""
+    accounts = config.get("accounts", [])
+    for idx, acc in enumerate(accounts):
+        if acc is account:
+            accounts.pop(idx)
+            return True
+    return False
 
 
 def load_credentials(config_path: pathlib.Path, config: dict[str, Any]) -> dict[str, Any]:

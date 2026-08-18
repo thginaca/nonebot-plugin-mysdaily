@@ -1,4 +1,4 @@
-【MiyoQian 商品兑换通知】
+【MysDaily 商品兑换通知】
 
 {{status_text}}
 
@@ -11,4 +11,4 @@
 
 💡 温馨提示：{{status_text}}后请到米游社查看订单详情，确认商品兑换状态。
 
-✨ MiyoQian · 米游社商品兑换助手
+✨ MysDaily · 米游社商品兑换助手

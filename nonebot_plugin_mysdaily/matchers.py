@@ -3,17 +3,21 @@
 
 权限：任何人可触发所有指令。
 所有指令自动按发送者 QQ 号筛选账号，用户只能操作自己绑定的账号。
+一个 QQ 号可绑定多个米游社账号，通过子账号名或序号区分。
 
 指令结构（前缀默认 `myq`，可通过 .env 的 MYSDAILY_COMMAND 修改）：
     /myq                      显示帮助
-    /myq run [子账号名]        执行我的签到（不填则我的全部账号）
+    /myq login [子账号名]      扫码登录绑定米游社（默认 main）
+    /myq status                查看我的账号状态（带序号）
+    /myq run [序号|子账号名]    执行我的签到（不填则我的全部账号）
     /myq run --games           仅执行游戏社区/云游戏签到
     /myq run --bbs             仅执行米游币社区任务
     /myq run --game genshin    仅执行指定游戏（可重复）
-    /myq status                查看我的账号状态
-    /myq login [子账号名]      扫码登录（自动绑定我的QQ号）
+    /myq delete [序号|子账号名] 删除我绑定的指定账号
     /myq toggle game|cloud|bbs on|off
     /myq reload                重载配置与定时任务
+    /myq runall                [Bot主] 一键执行全体签到
+    /myq statusall             [Bot主] 查看所有人账号状态
 """
 
 from __future__ import annotations
@@ -21,7 +25,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-import pathlib
 from typing import Optional
 
 import qrcode
@@ -39,7 +42,8 @@ from nonebot.params import CommandArg
 from .auth.login import QRLogin
 from .core import cookies
 from .core.config import (
-    find_account,
+    delete_account,
+    find_user_account,
     load_config,
     save_config,
     upsert_account,
@@ -61,14 +65,15 @@ ANYONE = None
 # ---------------------------------------------------------------------------
 def _help_text(command: str) -> str:
     return (
-        f"MiyoQian 指令帮助（前缀 {command}）\n"
+        f"mysdaily 指令帮助（前缀 {command}）\n"
         f"  {command}                      显示本帮助\n"
-        f"  {command} run [子账号名]        执行我的签到（不填则我的全部账号）\n"
+        f"  {command} login [子账号名]      扫码登录绑定米游社（默认 main）\n"
+        f"  {command} status                查看我的账号状态（带序号）\n"
+        f"  {command} run [序号|子账号名]    执行我的签到（不填则我的全部账号）\n"
         f"  {command} run --games           仅执行游戏社区/云游戏签到\n"
         f"  {command} run --bbs             仅执行米游币社区任务\n"
         f"  {command} run --game <name>     仅执行指定游戏（可重复）\n"
-        f"  {command} status                查看我的账号状态\n"
-        f"  {command} login [子账号名]      扫码登录（自动绑定我的QQ号）\n"
+        f"  {command} delete [序号|子账号名] 删除我绑定的指定账号\n"
         f"  {command} toggle game|cloud|bbs on|off\n"
         f"  {command} reload                重载配置与定时任务\n"
         f"  {command} runall                [Bot主] 一键执行全体签到\n"
@@ -79,7 +84,7 @@ def _help_text(command: str) -> str:
 async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     runtime = get_runtime()
     qq_user_id = str(event.user_id)
-    sub_account: Optional[str] = None  # 用户指定的子账号名（如 alt）
+    account_key: Optional[str] = None  # 用户指定的序号或子账号名
     games_only = False
     bbs_only = False
     only_games: list[str] = []
@@ -97,8 +102,8 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
             else:
                 await bot.send(event, "参数 --game 需要指定游戏名")
                 return
-        elif not arg.startswith("-") and sub_account is None:
-            sub_account = arg
+        elif not arg.startswith("-") and account_key is None:
+            account_key = arg
         else:
             await bot.send(event, f"未识别的参数: {arg}")
             return
@@ -108,23 +113,25 @@ async def _handle_run(bot: Bot, event: MessageEvent, args: list[str]) -> None:
         await bot.send(event, "--games 和 --bbs 不能同时使用")
         return
 
-    # 自动按发送者 QQ 号匹配账号
-    # sub_account=None → 执行该用户所有账号
-    # sub_account="alt" → 执行 qq_{qq_user_id}_alt
+    # 自动按发送者 QQ 号筛选账号
+    # account_key=None → 执行该用户所有账号
+    # account_key="2" 或 "alt" → 仅执行指定账号
+    # 传 UID（全局唯一）给 runner，避免不同用户同名子账号串号
     account = None
     config = runtime.load_config()
-    user_accounts = [a for a in config.get("accounts", []) if a.get("qq_user_id") == qq_user_id]
+    user_accounts = [a for a in config.get("accounts", []) if str(a.get("qq_user_id") or "") == qq_user_id]
     if not user_accounts:
         await bot.send(event, "你还没有绑定账号，请先使用 login 扫码登录")
         return
-    if sub_account:
-        account = f"qq_{qq_user_id}_{sub_account}"
-        # 确认该子账号存在
-        if not any(a.get("name") == account for a in user_accounts):
-            await bot.send(event, f"未找到你的账号: {sub_account}\n你绑定的账号: {', '.join(a.get('name','') for a in user_accounts)}")
+    if account_key:
+        try:
+            acc = find_user_account(config, qq_user_id, account_key)
+        except ValueError as exc:
+            await bot.send(event, str(exc))
             return
+        account = acc.get("stuid") or acc.get("name")
     elif len(user_accounts) == 1:
-        account = user_accounts[0].get("name")
+        account = user_accounts[0].get("stuid") or user_accounts[0].get("name")
 
     await bot.send(event, "⏳ 开始执行签到任务，请稍候…")
     await runtime.run_and_notify(
@@ -144,21 +151,17 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
     qq_user_id = str(event.user_id)
 
     # 只显示当前用户绑定的账号
-    accounts = [a for a in config.get("accounts", []) if a.get("qq_user_id") == qq_user_id]
+    accounts = [a for a in config.get("accounts", []) if str(a.get("qq_user_id") or "") == qq_user_id]
     if not accounts:
         await bot.send(event, "你还没有绑定账号，请先使用 login 扫码登录")
         return
 
     lines = ["【我的账号】"]
     for idx, acc in enumerate(accounts, 1):
-        name = acc.get("name", "未命名")
+        name = acc.get("name", "main")
         uid = acc.get("stuid", "")
         cookie_ok = "✅" if acc.get("cookie") else "❌"
-        # 显示：qq_123456789 → 主账号, qq_123456789_alt → alt
-        display_name = "主账号"
-        if name.startswith(f"qq_{qq_user_id}_"):
-            display_name = name[len(f"qq_{qq_user_id}_"):]
-        lines.append(f"{idx}. {display_name} (UID: {uid or '未登录'}) {cookie_ok}")
+        lines.append(f"{idx}. {name} (UID: {uid or '未登录'}) {cookie_ok}")
 
     features = config.get("features", {})
     games = config.get("games", {}).get("enabled", [])
@@ -168,7 +171,6 @@ async def _handle_status(bot: Bot, event: MessageEvent, args: list[str]) -> None
     lines.append(f"云游戏签到:   {'✅' if features.get('cloud_game_checkin') else '❌'} ({', '.join(cloud_games) or '未选择'})")
     lines.append(f"米游币任务:   {'✅' if features.get('bbs_tasks') else '❌'}")
 
-    sched = config.get("schedule", {})
     from .scheduler import resolve_schedule
     from . import plugin_config
 
@@ -192,18 +194,14 @@ async def _handle_statusall(bot: Bot, event: MessageEvent) -> None:
         await bot.send(event, "当前没有任何账号")
         return
 
+    # 按 QQ 号分组显示
     lines = [f"【全体账号】共 {len(accounts)} 个"]
     for idx, acc in enumerate(accounts, 1):
-        name = acc.get("name", "未命名")
+        name = acc.get("name", "main")
         uid = acc.get("stuid", "")
         cookie_ok = "✅" if acc.get("cookie") else "❌"
         qq_id = acc.get("qq_user_id", "")
-        # 显示：123456789(主) 或 123456789/alt
-        display = qq_id or name
-        if name.startswith(f"qq_{qq_id}_"):
-            display = f"{qq_id}/{name[len(f'qq_{qq_id}_'):]}"
-        elif qq_id and name == f"qq_{qq_id}":
-            display = qq_id
+        display = f"{qq_id}/{name}" if qq_id else name
         lines.append(f"{idx}. {display} (UID: {uid or '未登录'}) {cookie_ok}")
 
     if runtime.running:
@@ -231,32 +229,34 @@ async def _handle_runall(bot: Bot, event: MessageEvent) -> None:
 async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     """扫码登录：在执行器中跑同步 QRLogin，把二维码图片发给触发者。
 
-    群聊中账号自动绑定 QQ 号（qq_{user_id}），私聊中使用给定名字或默认 main。
+    账号名直接使用用户指定的子账号名（默认 main），同时记录 qq_user_id 绑定关系。
+    一个 QQ 号可绑定多个米游社账号，通过不同子账号名区分。
     """
     runtime = get_runtime()
     config = runtime.load_config()
     device = config["device"]
     timeout = plugin_config_login_timeout()
 
-    # 用 QQ 号绑定账号名，防止不同用户互相覆盖
     qq_user_id = str(event.user_id)
-    if args:
-        account_name = f"qq_{qq_user_id}_{args[0]}"
-    else:
-        account_name = f"qq_{qq_user_id}"
+    # 子账号名：用户自定义，默认 main（不再加 qq_ 前缀）
+    sub_name = (args[0].strip() if args else "") or "main"
+    account_name = sub_name
 
-    # 检查是否已有同名账号（如果 UID 不同，提醒用户）
+    # 检查该 QQ 下是否已有同名子账号
     existing = None
     for acc in config.get("accounts", []):
-        if acc.get("name") == account_name:
+        if str(acc.get("qq_user_id") or "") == qq_user_id and acc.get("name") == account_name:
             existing = acc
             break
     if existing:
         existing_uid = existing.get("stuid", "")
-        warn_msg = f"⚠️ 已存在账号「{account_name}」(UID: {existing_uid})\n扫码登录将更新此账号的凭证。"
-        await bot.send(event, warn_msg)
+        await bot.send(
+            event,
+            f"⚠️ 你的账号「{account_name}」已存在 (UID: {existing_uid})\n"
+            "扫码登录将更新此账号的凭证。",
+        )
     else:
-        await bot.send(event, f"正在为账号 {account_name} 生成二维码，请稍候…")
+        await bot.send(event, f"正在为账号「{account_name}」生成二维码，请稍候…")
 
     loop = asyncio.get_running_loop()
     holder: dict = {}
@@ -297,9 +297,9 @@ async def _handle_login(bot: Bot, event: MessageEvent, args: list[str]) -> None:
     save_config(runtime.config_path, config)
     new_count = len(config.get("accounts", []))
     uid = account_data.get("stuid", "")
-    msg = f"✅ 账号 {account_name} 登录成功 (UID: {uid}, QQ: {qq_user_id})"
+    msg = f"✅ 账号「{account_name}」登录成功 (UID: {uid})"
     if new_count > old_count:
-        msg += f"，当前共 {new_count} 个账号"
+        msg += f"，你当前共绑定 {new_count} 个账号"
     else:
         msg += "，已更新凭证"
     await bot.send(event, msg)
@@ -337,6 +337,26 @@ async def _handle_reload(bot: Bot, event: MessageEvent) -> None:
 
     reload_daily_job(runtime, plugin_config)
     await bot.send(event, "✅ 配置已重载，定时任务已更新")
+
+
+async def _handle_delete(bot: Bot, event: MessageEvent, args: list[str]) -> None:
+    """删除当前 QQ 绑定的指定米游社账号（按序号或子账号名）。"""
+    if not args:
+        await bot.send(event, "用法: delete [序号|子账号名]\n先用 status 查看你的账号序号")
+        return
+    runtime = get_runtime()
+    qq_user_id = str(event.user_id)
+    config = runtime.load_config()
+    try:
+        acc = find_user_account(config, qq_user_id, args[0])
+    except ValueError as exc:
+        await bot.send(event, str(exc))
+        return
+    name = acc.get("name", "")
+    uid = acc.get("stuid", "")
+    delete_account(config, acc)
+    save_config(runtime.config_path, config)
+    await bot.send(event, f"✅ 已删除账号「{name}」(UID: {uid})")
 
 
 # ---------------------------------------------------------------------------
@@ -428,6 +448,8 @@ def register_matchers(command: str) -> None:
             await _handle_statusall(bot, event)
         elif sub in ("login", "登录", "扫码"):
             await _handle_login(bot, event, rest)
+        elif sub in ("delete", "删除", "del"):
+            await _handle_delete(bot, event, rest)
         elif sub in ("toggle", "开关"):
             await _handle_toggle(bot, event, rest)
         elif sub in ("reload", "重载"):
