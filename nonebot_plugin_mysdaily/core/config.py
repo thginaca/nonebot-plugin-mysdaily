@@ -551,16 +551,38 @@ def merge_credentials(config: dict[str, Any], credentials: dict[str, Any]) -> No
     credential_by_uid: dict[str, dict[str, Any]] = {}
     credential_by_qq_name: dict[tuple[str, str], dict[str, Any]] = {}
     credential_by_name: dict[str, dict[str, Any]] = {}
+    # 同时建立「旧 name → 迁移后 name」的映射，兼容旧凭证文件
+    credential_by_old_name: dict[str, dict[str, Any]] = {}
     for account in credential_list:
         uid = str(account.get("stuid") or "")
         qq = str(account.get("qq_user_id") or "")
         name = str(account.get("name") or "")
+        # 旧格式迁移：凭证里的 name 也可能是 qq_{数字} 格式
+        if not qq and name.startswith("qq_"):
+            rest = name[3:]
+            if "_" in rest:
+                qq_part, _suffix = rest.split("_", 1)
+                if qq_part.isdigit():
+                    qq = qq_part
+            elif rest.isdigit():
+                qq = rest
+        # 从 cookie 兜底提取 UID（旧凭证文件可能没有 stuid 字段）
+        if not uid:
+            cookie = str(account.get("cookie") or "")
+            for part in cookie.split(";"):
+                part = part.strip()
+                if part.startswith("account_id="):
+                    uid = part.split("=", 1)[1].strip()
+                    account["stuid"] = uid
+                    break
         if uid:
             credential_by_uid.setdefault(uid, account)
         if qq and name:
             credential_by_qq_name.setdefault((qq, name), account)
         if name:
             credential_by_name.setdefault(name, account)
+            # 记录原始 name（含 qq_ 前缀）用于反向匹配
+            credential_by_old_name.setdefault(name, account)
 
     for account in config.get("accounts", []):
         uid = str(account.get("stuid") or "")
@@ -576,6 +598,14 @@ def merge_credentials(config: dict[str, Any], credentials: dict[str, Any]) -> No
         # 3. 仅 name 匹配（兼容旧凭证文件，单用户场景）
         if saved is None and name:
             saved = credential_by_name.get(name)
+        # 4. 兼容旧凭证：用迁移后的 (qq, name) 或旧 name 反向匹配
+        if saved is None and qq:
+            # config 里迁移前的旧 name 格式是 qq_{qq}_{suffix} 或 qq_{qq}
+            old_name_candidates = [f"qq_{qq}", f"qq_{qq}_{name}"]
+            for old_name in old_name_candidates:
+                if old_name in credential_by_old_name:
+                    saved = credential_by_old_name[old_name]
+                    break
         for field in SENSITIVE_ACCOUNT_FIELDS:
             if saved and not account.get(field):
                 account[field] = str(saved.get(field) or "")
@@ -583,6 +613,9 @@ def merge_credentials(config: dict[str, Any], credentials: dict[str, Any]) -> No
                 account.setdefault(field, "")
         if saved:
             account["qq_user_id"] = qq or str(saved.get("qq_user_id") or "")
+            # 同步 UID（旧 config 骨架可能没有 stuid）
+            if not account.get("stuid"):
+                account["stuid"] = str(saved.get("stuid") or "")
         merge_account_cloud_game_credentials(account, saved)
 
 
