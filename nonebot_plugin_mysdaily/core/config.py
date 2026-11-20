@@ -67,12 +67,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "error_only": False,
         "channels": [],
     },
-    "shop_exchange": {
-        "enable": True,
-        "retry_seconds": 20,
-        "retry_interval": 0.4,
-        "plans": [],
-    },
 }
 
 
@@ -202,64 +196,6 @@ def normalize_config(config: dict[str, Any]) -> None:
     bbs["read"] = False
     bbs["like"] = False
     bbs["share"] = False
-    normalize_shop_exchange(config)
-
-
-def normalize_shop_exchange(config: dict[str, Any]) -> None:
-    shop = config.setdefault("shop_exchange", {})
-    if not isinstance(shop, dict):
-        shop = {}
-        config["shop_exchange"] = shop
-    shop["enable"] = parse_bool(shop.get("enable", True))
-    try:
-        shop["retry_seconds"] = max(float(shop.get("retry_seconds", 20)), 0)
-    except (TypeError, ValueError):
-        shop["retry_seconds"] = 20
-    try:
-        shop["retry_interval"] = max(float(shop.get("retry_interval", 0.4)), 0.05)
-    except (TypeError, ValueError):
-        shop["retry_interval"] = 0.4
-    raw_plans = shop.get("plans")
-    if not isinstance(raw_plans, list):
-        raw_plans = []
-    plans: list[dict[str, Any]] = []
-    for raw in raw_plans:
-        if not isinstance(raw, dict):
-            continue
-        try:
-            account_index = max(int(raw.get("account_index", 0)), 0)
-        except (TypeError, ValueError):
-            account_index = 0
-        try:
-            exchange_at = int(float(raw.get("exchange_at") or 0))
-        except (TypeError, ValueError):
-            exchange_at = 0
-        plan = {
-            "enable": parse_bool(raw.get("enable", True)),
-            "auto": parse_bool(raw.get("auto", True)),
-            "account_index": account_index,
-            "goods_id": str(raw.get("goods_id") or "").strip(),
-            "goods_name": str(raw.get("goods_name") or raw.get("name") or "").strip(),
-            "icon": str(raw.get("icon") or ""),
-            "price": parse_int(raw.get("price"), 0),
-            "stock": str(raw.get("stock") or ""),
-            "type": parse_int(raw.get("type"), 0),
-            "exchange_at": exchange_at,
-            "game": str(raw.get("game") or ""),
-            "game_biz": str(raw.get("game_biz") or ""),
-            "device_fp": str(raw.get("device_fp") or ""),
-            "uid": str(raw.get("uid") or "").strip(),
-            "region": str(raw.get("region") or "").strip(),
-            "role_name": str(raw.get("role_name") or "").strip(),
-            "region_name": str(raw.get("region_name") or "").strip(),
-            "address_id": str(raw.get("address_id") or "").strip(),
-            "last_result": str(raw.get("last_result") or ""),
-            "last_attempt_key": str(raw.get("last_attempt_key") or ""),
-            "last_run": str(raw.get("last_run") or ""),
-        }
-        if plan["goods_id"]:
-            plans.append(plan)
-    shop["plans"] = plans
 
 
 def normalize_cloud_game_tokens(value: Any) -> dict[str, str]:
@@ -378,13 +314,6 @@ def parse_bool(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() not in {"", "0", "false", "no", "off"}
     return bool(value)
-
-
-def parse_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def validate_unique_account_uids(config: dict[str, Any]) -> None:

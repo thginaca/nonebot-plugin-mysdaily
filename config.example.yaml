@@ -83,10 +83,3 @@ push:
       enable: false
       token: ""
       topic: ""
-
-shop_exchange:
-  enable: true
-  retry_seconds: 20
-  retry_interval: 0.4
-  push: true
-  plans: []
